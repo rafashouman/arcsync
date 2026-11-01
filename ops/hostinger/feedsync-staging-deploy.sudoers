@@ -1,0 +1,2 @@
+%feedsync-staging-deploy ALL=(root) NOPASSWD: /usr/bin/systemctl cat feedsync-staging, /usr/bin/systemctl restart feedsync-staging, /usr/bin/systemctl stop feedsync-staging
+%feedsync-staging-deploy ALL=(feedsync-staging) NOPASSWD: /usr/bin/test -w /opt/feedsync-staging/shared/uploads

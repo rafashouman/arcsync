@@ -1,0 +1,24 @@
+[Unit]
+Description=FeedSync staging Next.js application
+After=network.target
+
+[Service]
+Type=simple
+User=feedsync-staging
+Group=feedsync-staging
+WorkingDirectory=/opt/feedsync-staging/current
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3002
+Environment=FEEDSYNC_UPLOADS_DIR=/opt/feedsync-staging/shared/uploads
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/opt/feedsync-staging/shared/.env.production
+ExecStart=/usr/bin/npm start -- --hostname 127.0.0.1 --port 3002
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=120
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

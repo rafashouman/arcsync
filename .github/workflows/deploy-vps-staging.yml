@@ -1,0 +1,115 @@
+name: Deploy FeedSync staging to Hostinger VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type deploy-staging to build and deploy the isolated staging app
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feedsync-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.12.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build production app
+        run: npm run build
+
+  deploy-staging:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'deploy-staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Check out verified source
+        uses: actions/checkout@v4
+
+      - name: Require VPS connection settings
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_USER"
+          test -n "$VPS_SSH_PRIVATE_KEY"
+          test -n "$VPS_KNOWN_HOSTS"
+
+      - name: Prepare pinned SSH host verification
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d "$RUNNER_TEMP/feedsync-ssh"
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/feedsync-ssh/id"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$RUNNER_TEMP/feedsync-ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/feedsync-ssh/id" "$RUNNER_TEMP/feedsync-ssh/known_hosts"
+
+      - name: Create isolated staging release directory
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh \
+            -i "$RUNNER_TEMP/feedsync-ssh/id" \
+            -o UserKnownHostsFile="$RUNNER_TEMP/feedsync-ssh/known_hosts" \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "mkdir -p '/opt/feedsync-staging/releases/$GITHUB_SHA'"
+
+      - name: Transfer source without secrets or uploaded media
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          rsync -az --no-owner --no-group --delete \
+            --exclude='.env*' \
+            --exclude='uploads/' \
+            --exclude='node_modules/' \
+            --exclude='.next/' \
+            --exclude='.git/' \
+            -e "ssh -i $RUNNER_TEMP/feedsync-ssh/id -o UserKnownHostsFile=$RUNNER_TEMP/feedsync-ssh/known_hosts -o StrictHostKeyChecking=yes" \
+            ./ \
+            "$VPS_USER@$VPS_HOST:/opt/feedsync-staging/releases/$GITHUB_SHA/"
+
+      - name: Build, activate and health-check staging
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh \
+            -i "$RUNNER_TEMP/feedsync-ssh/id" \
+            -o UserKnownHostsFile="$RUNNER_TEMP/feedsync-ssh/known_hosts" \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "bash -s -- '$GITHUB_SHA'" \
+            < scripts/deploy-vps-staging.sh

@@ -6,14 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx --test",
+    "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {
-    "firebase": "^13.1.0",
     "lucide-react": "^1.64.0",
     "mongodb": "^7.7.0",
     "mongoose": "^9.11.4",
     "next": "16.4.3",
+    "nodemailer": "^10.3.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zustand": "^5.0.16"
@@ -22,11 +24,13 @@
     "@tailwindcss/turbopack": "^4",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
