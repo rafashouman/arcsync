@@ -1,0 +1,50 @@
+services:
+  app:
+    image: feedsync:${FEEDSYNC_IMAGE_TAG:?Set FEEDSYNC_IMAGE_TAG in .env}
+    build:
+      context: .
+      target: runner
+      args:
+        APP_UID: ${FEEDSYNC_UID:-1000}
+        APP_GID: ${FEEDSYNC_GID:-1000}
+    env_file:
+      - ${FEEDSYNC_ENV_FILE:?Set FEEDSYNC_ENV_FILE in .env}
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      FEEDSYNC_UPLOADS_DIR: /app/uploads
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "127.0.0.1:${FEEDSYNC_PORT:-3000}:3000"
+    restart: unless-stopped
+    volumes:
+      - ${FEEDSYNC_UPLOADS_HOST_DIR:?Set FEEDSYNC_UPLOADS_HOST_DIR in .env}:/app/uploads
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  env-check:
+    image: feedsync-check:${FEEDSYNC_IMAGE_TAG:?Set FEEDSYNC_IMAGE_TAG in .env}
+    build:
+      context: .
+      target: builder
+    env_file:
+      - ${FEEDSYNC_ENV_FILE:?Set FEEDSYNC_ENV_FILE in .env}
+    environment:
+      NODE_ENV: production
+      FEEDSYNC_UPLOADS_DIR: /app/uploads
+    command:
+      - npm
+      - run
+      - check:env
+      - --
+      - --production

@@ -27,12 +27,8 @@ if [[ ! -d "$SHARED/uploads" ]]; then
   echo "Create the persistent media directory: $SHARED/uploads" >&2
   exit 1
 fi
-if ! command -v node >/dev/null || ! command -v npm >/dev/null; then
-  echo "Node.js 24.12+ and npm must be available to the deploy user." >&2
-  exit 1
-fi
-if ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major > 24 || (major === 24 && minor >= 12) ? 0 : 1)'; then
-  echo "Node.js 24.12 or newer is required." >&2
+if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
+  echo "Docker Engine and the Docker Compose plugin must be installed on the VPS." >&2
   exit 1
 fi
 if ! sudo -n systemctl cat "$SERVICE" >/dev/null 2>&1; then
@@ -44,11 +40,15 @@ if ! sudo -n -u feedsync-staging /usr/bin/test -w "$SHARED/uploads"; then
   exit 1
 fi
 
-ln -sfn "$SHARED/.env.production" "$RELEASE/.env.production"
-cd "$RELEASE"
-npm ci
-NODE_ENV=production FEEDSYNC_UPLOADS_DIR="$SHARED/uploads" npm run check:env -- --production
-npm run build
+cat > "$RELEASE/.env" <<EOF
+FEEDSYNC_IMAGE_TAG=$SHA
+FEEDSYNC_ENV_FILE=$SHARED/.env.production
+FEEDSYNC_UPLOADS_HOST_DIR=$SHARED/uploads
+FEEDSYNC_PORT=$PORT
+FEEDSYNC_UID=$(id -u feedsync-staging)
+FEEDSYNC_GID=$(id -g feedsync-staging)
+EOF
+chmod 0640 "$RELEASE/.env"
 
 PREVIOUS_RELEASE=""
 if [[ -L "$ROOT/current" ]]; then

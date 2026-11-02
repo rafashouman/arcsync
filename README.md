@@ -7,22 +7,25 @@ MongoDB, workspaces compartilhados, equipe e aprovação de conteúdo.
 
 ## Executar localmente
 
-Requisitos: Node.js 24.12 ou superior.
+Requisitos: Docker Desktop com Docker Compose.
 
 ```powershell
 Copy-Item .env.example .env.local
-npm install
-npm run dev
+docker compose up --build
 ```
 
 Abra [http://localhost:3000](http://localhost:3000).
+A aplicação e um MongoDB de desenvolvimento sobem juntos; o banco, as mídias,
+as dependências e o cache do Next.js ficam em volumes Docker. O Mongo local
+não tem autenticação e só é publicado em `127.0.0.1:27017`: use-o apenas para
+desenvolvimento. Para parar sem apagar dados, use `docker compose down`.
 
 ## Configuração
 
-1. Configure `MONGODB_URI` para autenticação e persistência de usuários,
-   sessões, posts e contas. Sem MongoDB, o login/cadastro não funciona e os
-   posts ficam apenas em memória, sem sobreviver à reinicialização. A URI de
-   `localhost` usada no desenvolvimento não deve ser copiada para produção.
+1. Para executar o app diretamente com Node.js, configure `MONGODB_URI` para
+   autenticação e persistência de usuários, sessões, posts e contas. No Docker
+   local, o Compose já aponta o app para o serviço MongoDB `mongo`; não use a
+   URI `localhost` do desenvolvimento em produção.
 2. Para permitir recuperação de senha, configure `SMTP_HOST`, `SMTP_PORT`,
    `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM`. `PUBLIC_APP_URL` deve apontar
    para a origem pública do app (HTTPS em produção); o link de redefinição é
@@ -34,13 +37,13 @@ Abra [http://localhost:3000](http://localhost:3000).
    Gere a chave de mídia com:
 
    ```powershell
-   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+   docker run --rm node:24-alpine node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
    ```
 
    Gere o segredo do cron com:
 
    ```powershell
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   docker run --rm node:24-alpine node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
 Não envie nem versione credenciais: `.env.local` está ignorado pelo Git.
@@ -73,13 +76,19 @@ variáveis SMTP no `.env.production` para habilitá-la neste ambiente.
 ### Deploy de homologação pelo GitHub
 
 O workflow `.github/workflows/deploy-vps-staging.yml` é **manual** e só aceita
-execução a partir da branch `main`, após testes, lint, type-check e build
+execução a partir da branch `main`, após testes, lint, type-check e build Docker
 passarem. Ele publica exclusivamente em `/opt/feedsync-staging`, no serviço
 `feedsync-staging` e na porta local `3002`; não altera o deploy de produção em
-`/opt/feedsync`. A transferência exclui `.env*`, `uploads/`, `.next/`,
-`node_modules/` e `.git/`. O diretório `shared/uploads` persiste entre versões,
-e releases são ativadas por symlink; uma falha no health check restaura a versão
-anterior.
+`/opt/feedsync`. O systemd executa Docker Compose, que valida as variáveis,
+constrói a imagem marcada com o SHA do commit e inicia o container. A
+transferência exclui `.env*`, `uploads/`, `.next/`, `node_modules/` e `.git/`.
+O diretório `shared/uploads` persiste entre versões, e releases são ativadas
+por symlink; uma falha ao iniciar ou no health check restaura a versão anterior.
+Em staging e produção, o MongoDB fica fora do container da aplicação. Todas as
+réplicas do app no mesmo ambiente devem compartilhar o banco e as credenciais
+daquele ambiente; staging e produção usam bancos/usuários separados. Não crie
+um MongoDB por réplica. O staging começa com uma réplica; escalar exige também
+compartilhar uploads/cache e ajustar o proxy.
 
 Antes de habilitar o workflow:
 
@@ -87,8 +96,8 @@ Antes de habilitar o workflow:
    `VPS_HOST`, `VPS_USER`, `VPS_SSH_PRIVATE_KEY` e `VPS_KNOWN_HOSTS`. Use uma
    chave SSH dedicada ao deploy e um `known_hosts` cuja fingerprint foi
    verificada fora do GitHub Actions. Não coloque nenhum segredo no repositório.
-2. Na VPS, prepare Node.js 24.12+ e `npm` em `/usr/bin`, além de `rsync`, `curl`,
-   `systemd`, Nginx e Certbot. Crie o grupo e usuário de serviço
+2. Na VPS, instale Docker Engine com o plugin Docker Compose, além de `rsync`,
+   `curl`, `systemd`, Nginx e Certbot. Crie o grupo e usuário de serviço
    `feedsync-staging`, separados do serviço de produção `feedsync`, e um usuário
    SSH de deploy dedicado. Adicione o usuário de deploy aos grupos
    `feedsync-staging` e `feedsync-staging-deploy`; crie o segundo grupo e
@@ -99,12 +108,17 @@ Antes de habilitar o workflow:
    modo `0750`; crie `releases` como `<deploy-user>:feedsync-staging` com modo
    `2770`, e `shared/uploads` como `feedsync-staging:feedsync-staging` com modo
    `0750`. Crie `/opt/feedsync-staging/shared/.env.production` como
-   `root:feedsync-staging`, modo `0640`; o usuário de deploy precisa lê-lo para
-   validar e construir o app, mas não alterá-lo. Configure-o diretamente na
-   VPS com `PUBLIC_APP_URL=https://staging.feedsync.focuspulse.site`, um banco
-   MongoDB de homologação separado da produção e as demais variáveis exigidas
-   por `npm run check:env -- --production`. Não configure OAuth social ainda;
-   os testes reais continuam reservados para a etapa final.
+   `root:feedsync-staging`, modo `0640`. Configure-o diretamente na VPS com
+   `PUBLIC_APP_URL=https://staging.feedsync.focuspulse.site`, credenciais de um
+   banco MongoDB de homologação separado da produção e as demais variáveis
+   exigidas por `npm run check:env -- --production`. `MONGODB_URI` precisa usar
+   um endereço acessível de dentro da rede Docker, por exemplo
+   `host.docker.internal:27018`, não `localhost`. Como o MongoDB atual só
+   escuta em `127.0.0.1`, configure-o para aceitar conexões no endereço gateway
+   do Docker e restrinja o acesso à rede Docker no firewall; não o exponha em
+   todas as interfaces. O container usa o usuário de serviço do host para
+   gravar em `shared/uploads`. Não configure OAuth social ainda; os testes
+   reais continuam reservados para a etapa final.
 4. Instale [feedsync-staging.service](./ops/hostinger/feedsync-staging.service)
    em `/etc/systemd/system/feedsync-staging.service`, execute
    `systemctl daemon-reload` e habilite o serviço. Instale
