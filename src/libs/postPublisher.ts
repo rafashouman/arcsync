@@ -1,16 +1,25 @@
 import 'server-only';
+import { publishClaimedFacebookPost } from '@/src/libs/facebookPublisher';
 
 import {
   finalizeClaimedPost,
+  releaseClaimedPost,
+  failClaimedPost,
   type ClaimedPost,
 } from '@/src/data/posts';
-import { getNextPublishPlatform } from '@/src/libs/publishPlanning';
+import { planDestinations } from '@/src/libs/destinationPlanning';
 import { publishClaimedInstagramPost } from '@/src/libs/instagramPublisher';
 import { publishClaimedTikTokPost } from '@/src/libs/tiktokPublisher';
 import { publishClaimedYouTubePost } from '@/src/libs/youtubePublisher';
 
 export async function publishClaimedPost(post: ClaimedPost) {
-  const platform = getNextPublishPlatform(post.platforms, post.publishStates);
+  const plan = planDestinations(post, post.publishStates, Date.now());
+  const platform = plan.platform;
+  if (!platform && !plan.complete) {
+    if (!Number.isFinite(plan.nextAt)) { await failClaimedPost(post._id, post.processingRunId, 'Horário de destino inválido.'); return 'failed' as const; }
+    await releaseClaimedPost(post._id, post.processingRunId, new Date(plan.nextAt!));
+    return 'waiting' as const;
+  }
   if (!platform) {
     const finalized = await finalizeClaimedPost(post);
     return finalized
@@ -20,7 +29,15 @@ export async function publishClaimedPost(post: ClaimedPost) {
       : 'lost-claim' as const;
   }
 
+  const destination = post.destinations?.find(d => d.platform === platform);
+  if (!destination?.accountId) {
+    await failClaimedPost(post._id, post.processingRunId, 'Selecione explicitamente as contas de destino antes de publicar este agendamento legado.');
+    return 'failed' as const;
+  }
+  post = { ...post, caption: destination.caption || post.caption, mediaUrls: destination.mediaUrls ?? post.mediaUrls };
   switch (platform) {
+    case 'facebook':
+      return publishClaimedFacebookPost(post);
     case 'instagram':
       return publishClaimedInstagramPost(post);
     case 'youtube':

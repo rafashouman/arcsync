@@ -20,12 +20,14 @@ export const PUBLISH_PLATFORM_ORDER: readonly SocialPlatform[] = [
   'instagram',
   'tiktok',
   'youtube',
+  'facebook',
 ];
 
 export const PLATFORM_LABELS: Record<SocialPlatform, string> = {
   instagram: 'Instagram',
   tiktok: 'TikTok',
   youtube: 'YouTube',
+  facebook: 'Facebook',
 };
 
 const TIKTOK_SINGLE_CHUNK_LIMIT = 64 * 1024 * 1024;
@@ -104,6 +106,7 @@ export function toPlatformStatuses(
   return records.map((record) => ({
     platform: record.platform,
     state: record.state,
+    ...(record.externalId ? { externalId: record.externalId } : {}),
     ...(record.error ? { error: record.error } : {}),
     ...(record.mayHaveSucceeded ? { mayHaveSucceeded: true } : {}),
   }));

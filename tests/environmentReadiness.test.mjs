@@ -26,6 +26,7 @@ test('accepts required local configuration and reports unverified social integra
   assert.deepEqual(
     checks.map(({ key, level }) => [key, level]),
     [
+      ['Facebook', 'warning'],
       ['Instagram', 'warning'],
       ['TikTok', 'warning'],
       ['YouTube', 'warning'],

@@ -25,12 +25,14 @@ const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 const PLATFORM_LABEL: Record<OAuthPlatform, string> = {
   tiktok: 'TikTok',
   youtube: 'YouTube',
+  facebook: 'Facebook',
 };
 
 async function refreshTokens(
   platform: OAuthPlatform,
   refreshToken: string,
 ): Promise<OAuthTokenSet> {
+  if (platform === 'facebook') throw new PlatformPublishError('Reconecte a Página do Facebook para renovar a autorização.');
   return platform === 'tiktok'
     ? refreshTikTokTokens(getTikTokOAuthConfig(), refreshToken)
     : refreshYouTubeTokens(getYouTubeOAuthConfig(), refreshToken);
@@ -39,9 +41,10 @@ async function refreshTokens(
 export async function getValidSocialAccessToken(
   workspaceId: string,
   platform: OAuthPlatform,
+  accountId?: string,
 ) {
   const label = PLATFORM_LABEL[platform];
-  const account = await getDefaultSocialAccountForWorkspace(workspaceId, platform);
+  const account = await getDefaultSocialAccountForWorkspace(workspaceId, platform, accountId);
   if (!account) {
     throw new PlatformPublishError(
       `Nenhuma conta padrão do ${label} está conectada.`,

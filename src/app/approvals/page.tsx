@@ -28,7 +28,7 @@ async function ApprovalsContent() {
         <header className="mb-8 flex items-center justify-between gap-4">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white">
             <ArrowLeft size={16} />
-            Voltar ao calendário
+            Voltar ao início
           </Link>
           <SignOutButton email={user.email} />
         </header>

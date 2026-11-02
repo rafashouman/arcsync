@@ -7,6 +7,7 @@ import {
   Unplug,
 } from 'lucide-react';
 import {
+  FacebookIcon,
   TikTokIcon,
   YoutubeIcon,
 } from '@/src/components/icons/SocialIcons';
@@ -29,6 +30,7 @@ const platformDetails: Record<
     Icon: TikTokIcon,
     tone: 'text-cyan-200 border-cyan-400/15 bg-cyan-400/[0.08]',
   },
+  facebook: {label:'Facebook Páginas',Icon:FacebookIcon,tone:'text-blue-200 border-blue-400/15 bg-blue-400/10'},
   youtube: {
     label: 'YouTube',
     Icon: YoutubeIcon,
@@ -82,7 +84,7 @@ export default function OAuthSocialAccounts({
   configured: Record<OAuthPlatform, boolean>;
   canManageAccounts: boolean;
 }) {
-  const message = status ? statusMessages[status] : undefined;
+  const message = status ? statusMessages[status] ?? (status.startsWith('facebook-') ? {tone: status === 'facebook-connected' || status === 'facebook-disconnected' || status === 'facebook-default-updated' ? 'success' : 'error', text: status === 'facebook-connected' ? 'Páginas autorizadas conectadas. Selecione a Página de destino em cada post.' : status === 'facebook-disconnected' ? 'Página desconectada do FeedSync. Para revogar o acesso na Meta, remova o app nas integrações comerciais do Facebook.' : status === 'facebook-default-updated' ? 'Página padrão atualizada.' : 'Conexão Facebook não concluída. Confira permissões e configuração e reconecte a Página.'} : undefined) : undefined;
 
   return (
     <section className="space-y-5">
@@ -106,7 +108,7 @@ export default function OAuthSocialAccounts({
         </div>
       )}
 
-      {(['tiktok', 'youtube'] as const).map((platform) => {
+      {(['tiktok', 'youtube', 'facebook'] as const).map((platform) => {
         const { label, Icon, tone } = platformDetails[platform];
         const isReady = hasMongo && hasEncryptionKey && configured[platform];
         return (
@@ -211,7 +213,7 @@ export default function OAuthSocialAccounts({
                         ) : null}
                         {canManageAccounts && (
                           <>
-                            <form action={refreshSocialAccount.bind(null, platform, account.id)}>
+                            {platform !== 'facebook' && <form action={refreshSocialAccount.bind(null, platform, account.id)}>
                               <button
                                 type="submit"
                                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 text-[11px] text-slate-300 transition hover:bg-white/[0.05]"
@@ -219,7 +221,7 @@ export default function OAuthSocialAccounts({
                                 <RefreshCw size={13} />
                                 Renovar
                               </button>
-                            </form>
+                            </form>}
                             <form action={disconnectSocialAccount.bind(null, platform, account.id)}>
                               <button
                                 type="submit"
@@ -243,8 +245,8 @@ export default function OAuthSocialAccounts({
 
       <div className="flex items-start gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-[11px] leading-5 text-slate-500">
         <ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-300/70" />
-        Os tokens são armazenados com criptografia AES-256-GCM. Cada rede usa sua
-        própria conta padrão.
+        Os tokens são armazenados com criptografia AES-256-GCM. Escolha explicitamente a
+        conta de destino em cada agendamento.
       </div>
     </section>
   );

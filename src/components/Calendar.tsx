@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import {
   InstagramIcon,
+  FacebookIcon,
   TikTokIcon,
   YoutubeIcon,
 } from '@/src/components/icons/SocialIcons';
@@ -44,6 +45,7 @@ const platformDetails: Record<
     icon: TikTokIcon,
     color: 'text-cyan-200 bg-cyan-400/10 border-cyan-400/20',
   },
+  facebook: {label:'Facebook',icon:FacebookIcon, color:'text-blue-300',},
   youtube: {
     label: 'YouTube',
     icon: YoutubeIcon,
@@ -388,6 +390,7 @@ export default function SchedulingCalendar({
                 <option value="instagram">Instagram</option>
                 <option value="tiktok">TikTok</option>
                 <option value="youtube">YouTube</option>
+                <option value="facebook">Facebook</option>
               </select>
 
               <select

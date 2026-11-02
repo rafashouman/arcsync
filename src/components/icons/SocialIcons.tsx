@@ -20,3 +20,4 @@ export const TikTokIcon = ({ size = 24, className = "" }: { size?: number, class
     <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>
   </svg>
 );
+export const FacebookIcon = ({ size = 24, className = "" }: { size?: number; className?: string }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true"><path d="M14 21v-8h3l.5-4H14V7c0-1 .3-2 2-2h2V1.5A25 25 0 0 0 15 1c-3 0-5 2-5 5v3H7v4h3v8z" /></svg>);

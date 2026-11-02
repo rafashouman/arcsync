@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+process.env.MONGODB_URI = 'mongodb://127.0.0.1:27119/feedsync_mvp_integration';
+const {default: mongoose} = await import('mongoose');
+const data = await import('../src/data/posts');
+const {Post} = await import('../src/models/Post');
+const {planDestinations} = await import('../src/libs/destinationPlanning');
+const workspace = `test-${crypto.randomUUID()}`;
+try {
+ const first = new Date(Date.now()-1000).toISOString(); const later = new Date(Date.now()+3600000).toISOString();
+ const post = await data.createPostForWorkspace(workspace,'test-user',{caption:'Integration',platforms:['instagram','youtube'],scheduledFor:first,timeZone:'UTC',mediaUrls:[],destinations:[{platform:'instagram',accountId:'a'.repeat(24),format:'feed',mediaUrls:['first.jpg'],scheduledFor:first},{platform:'youtube',accountId:'b'.repeat(24),format:'video',mediaUrls:['second.mp4'],scheduledFor:later}]});
+ assert.equal(await data.getPostForWorkspace('other-workspace',post._id),null);
+ const claims = await Promise.all([data.claimDuePost(new Date(),crypto.randomUUID(),600000),data.claimDuePost(new Date(),crypto.randomUUID(),600000)]);
+ assert.equal(claims.filter(Boolean).length,1);
+ const claim = claims.find(Boolean)!;
+ assert.equal(claim.destinations![1].mediaUrls![0],'second.mp4');
+ assert.equal(planDestinations(claim,[],Date.now()).platform,'instagram');
+ assert.equal(await data.updateClaimedPost(post._id,'wrong-run',{caption:'bad'}),false);
+ await data.completeClaimedPlatform(claim,'ig-id',[{platform:'instagram',state:'published',externalId:'ig-id'}]);
+ const next = await data.claimDuePost(new Date(),crypto.randomUUID(),600000);
+ assert.ok(next); const plan = planDestinations(next,next.publishStates,Date.now());
+ assert.equal(plan.platform,undefined); assert.equal(plan.complete,false);
+ await data.releaseClaimedPost(next._id,next.processingRunId,new Date(plan.nextAt!));
+ assert.equal(await data.claimDuePost(new Date(),crypto.randomUUID(),600000),null);
+ const stored = await data.getPostForWorkspace(workspace,post._id);
+ assert.ok(stored!.history!.some(h=>h.event==='platform_result'));
+ assert.ok(stored!.history!.some(h=>h.event==='waiting'));
+ const draft = await data.createPostForWorkspace(workspace,'test-user',{caption:'Delete audit',platforms:['instagram'],scheduledFor:null,timeZone:'UTC',mediaUrls:[]},'draft');
+ assert.ok(await data.deletePostForWorkspace(workspace,draft._id));
+ assert.equal(await data.getPostForWorkspace(workspace,draft._id),null);
+ assert.ok(!(await data.listPostsForWorkspace(workspace)).some(p=>p._id===draft._id));
+ const archive = await data.listDeletedPostsForWorkspace(workspace);
+ assert.ok(archive.find(p=>p._id===draft._id)?.history?.some(h=>h.event==='deleted'));
+ assert.equal((await data.listDeletedPostsForWorkspace('other-workspace')).length,0);
+ console.log('PASS: persistence, workspace isolation, concurrent claims, fencing, independent schedule, history.');
+} finally { if (mongoose.connection.readyState === 1) await Post.deleteMany({workspaceId:workspace}); await mongoose.disconnect(); }

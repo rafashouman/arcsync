@@ -26,7 +26,10 @@ const mockPosts =
   (globalWithPosts.feedsyncMockPosts = []);
 
 function serializePost(post: {
+  history?: PostRecord['history'];
+  deletedAt?: Date | string | null;
   _id: unknown;
+  destinations?: PostRecord['destinations'];
   caption?: string;
   platforms?: PostRecord['platforms'];
   scheduledFor?: Date | string | null;
@@ -58,6 +61,8 @@ function serializePost(post: {
 }): PostRecord {
   const publishStates = post.publishStates ?? [];
   return {
+    history: post.history?.map(h => ({at:h.at,event:h.event,runId:h.runId,states:h.states?.map(s => ({platform:s.platform,state:s.state}))})) ?? [],
+    ...(post.deletedAt ? {deletedAt:new Date(post.deletedAt).toISOString()} : {}),
     _id: String(post._id),
     ...(post.workspaceId ? { workspaceId: post.workspaceId } : {}),
     ...(post.userId ? { createdBy: post.userId } : {}),
@@ -71,6 +76,7 @@ function serializePost(post: {
       ...(entry.comment ? { comment: entry.comment } : {}),
       at: new Date(entry.at).toISOString(),
     })),
+    destinations: post.destinations?.map(d => ({ platform: d.platform, accountId: d.accountId, format: d.format, caption: d.caption, scheduledFor: d.scheduledFor, mediaUrls: d.mediaUrls, youtube: d.youtube ? { title: d.youtube.title, description: d.youtube.description, privacyStatus: d.youtube.privacyStatus, madeForKids: d.youtube.madeForKids, containsSyntheticMedia: d.youtube.containsSyntheticMedia } : undefined })),
     caption: post.caption ?? '',
     platforms: post.platforms ?? [],
     scheduledFor: post.scheduledFor
@@ -122,7 +128,7 @@ export async function listPostsForWorkspace(
   const db = await connectDB();
   if (!db) {
     return mockPosts
-      .filter((entry) => entry.ownerId === workspaceId)
+      .filter((entry) => entry.ownerId === workspaceId && !entry.post.deletedAt)
       .map((entry) => entry.post)
       .sort(
         (a, b) =>
@@ -131,7 +137,7 @@ export async function listPostsForWorkspace(
       );
   }
 
-  const posts = await Post.find({ workspaceId })
+  const posts = await Post.find({ workspaceId, deletedAt:null })
     .sort({ scheduledFor: 1 })
     .lean();
   return posts.map(serializePost);
@@ -173,13 +179,13 @@ export async function getPostForWorkspace(
   if (!db) {
     return (
       mockPosts.find(
-        (entry) => entry.ownerId === workspaceId && entry.post._id === postId,
+        (entry) => entry.ownerId === workspaceId && entry.post._id === postId && !entry.post.deletedAt,
       )?.post ?? null
     );
   }
 
   if (!/^[a-f\d]{24}$/i.test(postId)) return null;
-  const post = await Post.findOne({ _id: postId, workspaceId }).lean();
+  const post = await Post.findOne({ _id: postId, workspaceId, deletedAt:null }).lean();
   return post ? serializePost(post) : null;
 }
 
@@ -205,7 +211,7 @@ export async function createPostForWorkspace(
       _id: randomUUID(),
       workspaceId,
       createdBy: creatorId,
-      mediaOwnerKeys: getMediaOwnerKeys(input.mediaUrls),
+      mediaOwnerKeys: getMediaOwnerKeys([...input.mediaUrls, ...(input.destinations ?? []).flatMap(d => d.mediaUrls ?? [])]),
       ...input,
       status,
       approvalStatus,
@@ -219,9 +225,10 @@ export async function createPostForWorkspace(
 
   const post = await Post.create({
     ...input,
+    history: [{ at: new Date().toISOString(), event: 'created' }],
     userId: creatorId,
     workspaceId,
-    mediaOwnerKeys: getMediaOwnerKeys(input.mediaUrls),
+    mediaOwnerKeys: getMediaOwnerKeys([...input.mediaUrls, ...(input.destinations ?? []).flatMap(d => d.mediaUrls ?? [])]),
     approvalStatus,
     approvalHistory: approvalStatus === 'pending'
       ? [{ action: 'requested', userId: creatorId, at: new Date() }]
@@ -257,7 +264,7 @@ export async function updatePostForWorkspace(
       ...entry.post,
       ...input,
       status,
-      mediaOwnerKeys: getMediaOwnerKeys(input.mediaUrls),
+      mediaOwnerKeys: getMediaOwnerKeys([...input.mediaUrls, ...(input.destinations ?? []).flatMap(d => d.mediaUrls ?? [])]),
       approvalStatus,
       approvalHistory: [
         ...(entry.post.approvalHistory ?? []),
@@ -276,6 +283,7 @@ export async function updatePostForWorkspace(
     {
       _id: postId,
       workspaceId,
+      deletedAt:null,
       status: { $in: ['draft', 'pending', 'failed'] },
       publishMayHaveSucceeded: { $ne: true },
       publishStates: { $not: { $elemMatch: { state: 'published' } } },
@@ -283,7 +291,7 @@ export async function updatePostForWorkspace(
     {
       $set: {
         ...input,
-        mediaOwnerKeys: getMediaOwnerKeys(input.mediaUrls),
+        mediaOwnerKeys: getMediaOwnerKeys([...input.mediaUrls, ...(input.destinations ?? []).flatMap(d => d.mediaUrls ?? [])]),
         approvalStatus,
         tiktokConsentAt: input.tiktokConsentAt
           ? new Date(input.tiktokConsentAt)
@@ -300,17 +308,10 @@ export async function updatePostForWorkspace(
         publishedMediaId: '',
         publishMayHaveSucceeded: false,
       },
-      ...(approvalStatus === 'pending'
-        ? {
-            $push: {
-              approvalHistory: {
-                action: 'requested',
-                userId: actorId,
-                at: new Date(),
-              },
-            },
-          }
-        : {}),
+      $push: {
+        history: {at:new Date().toISOString(),event:'edited'},
+        ...(approvalStatus === 'pending' ? {approvalHistory:{action:'requested',userId:actorId,at:new Date()}} : {}),
+      },
     },
     { new: true, runValidators: true },
   ).lean();
@@ -353,6 +354,7 @@ export async function retryFailedPostForWorkspace(
   const retryFilter = {
     _id: postId,
     workspaceId,
+    deletedAt:null,
     status: 'failed',
     publishMayHaveSucceeded: { $ne: true },
   };
@@ -378,6 +380,7 @@ export async function retryFailedPostForWorkspace(
         attempts: 0,
         publishMayHaveSucceeded: false,
       },
+      $push: {history:{at:new Date().toISOString(),event:'manual_retry'}},
     },
     { new: true, runValidators: true },
   ).lean();
@@ -411,10 +414,11 @@ export async function reschedulePendingPostForWorkspace(
     {
       _id: postId,
       workspaceId,
+      deletedAt:null,
       status: 'pending',
       publishMayHaveSucceeded: { $ne: true },
     },
-    { $set: { scheduledFor } },
+    { $set: { scheduledFor }, $push: {history:{at:new Date().toISOString(),event:'rescheduled'}} },
     { new: true, runValidators: true },
   ).lean();
   return post ? serializePost(post) : null;
@@ -437,17 +441,17 @@ export async function deletePostForWorkspace(
       post.status === 'processing' ||
       post.publishMayHaveSucceeded
     ) return null;
-    mockPosts.splice(index, 1);
+    post.deletedAt = new Date().toISOString();
+    post.history = [...(post.history ?? []), {at:post.deletedAt,event:'deleted'}];
     return post;
   }
 
   if (!/^[a-f\d]{24}$/i.test(postId)) return null;
-  const post = await Post.findOneAndDelete({
-    _id: postId,
-    workspaceId,
-    status: { $in: ['pending', 'failed'] },
+  const post = await Post.findOneAndUpdate({
+    _id: postId, workspaceId, deletedAt:null,
+    status: { $in: ['draft', 'pending', 'failed'] },
     publishMayHaveSucceeded: { $ne: true },
-  }).lean();
+  }, { $set:{deletedAt:new Date()}, $push:{history:{at:new Date().toISOString(),event:'deleted'}} }, {returnDocument:'after'}).lean();
   return post ? serializePost(post) : null;
 }
 
@@ -458,12 +462,13 @@ export async function listPendingApprovalPosts(workspaceId: string) {
       .filter(
         (entry) =>
           entry.ownerId === workspaceId &&
-          entry.post.approvalStatus === 'pending',
+          entry.post.approvalStatus === 'pending' && !entry.post.deletedAt,
       )
       .map((entry) => entry.post);
   }
   const posts = await Post.find({
     workspaceId,
+    deletedAt:null,
     status: 'pending',
     approvalStatus: 'pending',
   })
@@ -516,6 +521,7 @@ export async function reviewPostForWorkspace(
     {
       _id: postId,
       workspaceId,
+      deletedAt:null,
       status: 'pending',
       approvalStatus: 'pending',
     },
@@ -525,6 +531,7 @@ export async function reviewPostForWorkspace(
         errorLog: decision === 'reject' ? comment : '',
       },
       $push: {
+        history: {at:new Date().toISOString(),event:decision === 'approve' ? 'approved' : 'rejected'},
         approvalHistory: {
           action,
           userId: reviewerId,
@@ -547,6 +554,7 @@ export async function claimDuePost(
   const staleBefore = new Date(now.getTime() - leaseMs);
   const post = await Post.findOneAndUpdate(
     {
+      deletedAt:null,
       scheduledFor: { $lte: now },
       $and: [
         {
@@ -579,6 +587,7 @@ export async function claimDuePost(
         processingStartedAt: now,
         errorLog: '',
       },
+      $push: { history: {at: now.toISOString(), event:'claimed', runId} },
     },
     { new: true, sort: { scheduledFor: 1 } },
   ).lean();
@@ -604,7 +613,7 @@ export async function updateClaimedPost(
   await getPersistentDatabase();
   const result = await Post.updateOne(
     { _id: postId, status: 'processing', processingRunId: runId },
-    { $set: fields },
+    { $set: fields, $push: { history: {at:new Date().toISOString(),event:'progress',runId,states: ((fields.publishStates ?? []) as PlatformPublishRecord[]).map(s => ({platform:s.platform,state:s.state}))} } },
   );
   return result.modifiedCount === 1;
 }
@@ -625,6 +634,7 @@ export async function releaseClaimedPost(
         processingRunId: '',
         processingStartedAt: null,
       },
+      $push: { history: {at:new Date().toISOString(), event:incrementAttempt ? 'retry_scheduled' : 'waiting',runId} },
       ...(incrementAttempt ? { $inc: { attempts: 1 } } : {}),
     },
   );
@@ -648,6 +658,7 @@ export async function failClaimedPost(
         processingRunId: '',
         processingStartedAt: null,
       },
+      $push: {history:{at:new Date().toISOString(),event:publishMayHaveSucceeded ? 'uncertain' : 'failed',runId}},
     },
   );
   return result.modifiedCount === 1;
@@ -679,6 +690,7 @@ async function finishPlatformAttempt(
         processingStartedAt: null,
         nextAttemptAt: status === 'pending' ? now : null,
       },
+      $push: { history: {at:now.toISOString(),event:'platform_result',runId,states:publishStates.map(s => ({platform:s.platform,state:s.state}))} },
     },
   );
   return result.modifiedCount === 1;
@@ -728,4 +740,10 @@ export async function finalizeClaimedPost(post: ClaimedPost) {
       (record) => record.state === 'failed' && record.mayHaveSucceeded,
     ),
   );
+}
+
+export async function listDeletedPostsForWorkspace(workspaceId: string): Promise<PostRecord[]> {
+ const db = await connectDB();
+ if (!db) return mockPosts.filter(e => e.ownerId === workspaceId && e.post.deletedAt).map(e => e.post);
+ return (await Post.find({workspaceId,deletedAt:{$type:'date'}}).sort({deletedAt:-1}).limit(100).lean()).map(serializePost);
 }

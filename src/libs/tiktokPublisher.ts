@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { readFile } from 'fs/promises';
+import { createSignedMediaUrl } from '@/src/libs/mediaStorage';
 import {
   completeClaimedPlatform,
   failClaimedPlatform,
@@ -9,6 +10,7 @@ import {
   type ClaimedPost,
 } from '@/src/data/posts';
 import { reserveTikTokPostingUser } from '@/src/data/tiktokPostingQuota';
+import { getDefaultSocialAccountForWorkspace } from '@/src/data/socialAccounts';
 import { getOwnedLocalVideo, readFileRange } from '@/src/libs/ownedMedia';
 import {
   getTikTokPublishingIssue,
@@ -33,7 +35,7 @@ import {
 } from '@/src/libs/videoMetadata';
 import {
   fetchTikTokPublishStatus,
-  initializeTikTokVideoUpload,
+  initializeTikTokVideoFromUrl,
   TikTokApiError,
   validateTikTokUploadUrl,
   uploadTikTokVideoChunk,
@@ -157,11 +159,9 @@ function validatePostSettings(
 async function startTikTokUpload(
   accessToken: string,
   post: ClaimedPost,
-  videoSize: number,
-  chunkSize: number,
-  totalChunkCount: number,
+  videoUrl: string,
 ) {
-  return initializeTikTokVideoUpload(
+  return initializeTikTokVideoFromUrl(
     accessToken,
     {
       title: (post.tiktokTitle || post.caption).trim(),
@@ -172,7 +172,7 @@ async function startTikTokUpload(
       brandOrganic: post.tiktokBrandOrganic ?? false,
       brandContent: post.tiktokBrandContent ?? false,
     },
-    { videoSize, chunkSize, totalChunkCount },
+    videoUrl,
   );
 }
 
@@ -261,6 +261,14 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
   let publishStates = post.publishStates;
 
   try {
+    if (currentRecord?.mayHaveSucceeded && !currentRecord.externalId) {
+      throw new TikTokPublishError('O envio anterior não retornou confirmação. Confira a conta antes de criar outra publicação.', {mayHaveSucceeded: true});
+    }
+    // Resume polling before touching local media or settings that may have changed.
+    if (currentRecord?.externalId && currentRecord.state === 'processing') {
+      const token = await getValidSocialAccessToken(post.workspaceId, 'tiktok', post.destinations?.find(d => d.platform === 'tiktok')?.accountId);
+      return await waitForTikTokStatus(post, token, currentRecord.externalId, currentRecord);
+    }
     const { filePath, size, contentType } = await getOwnedLocalVideo(post);
     if (size > MAX_UPLOAD_BYTES) {
       throw new TikTokPublishError('O vídeo deve ter até 95 MB para este envio.');
@@ -278,7 +286,7 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
           : 'Não foi possível validar a duração do vídeo.',
       );
     }
-    const accessToken = await getValidSocialAccessToken(post.workspaceId, 'tiktok');
+    const accessToken = await getValidSocialAccessToken(post.workspaceId, 'tiktok', post.destinations?.find(d => d.platform === 'tiktok')?.accountId);
     const creatorInfo = await getCreatorInfo(accessToken);
     try {
       assertVideoDurationWithinLimit(
@@ -294,47 +302,38 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
     }
     validatePostSettings(post, creatorInfo);
 
-    if (currentRecord?.externalId && currentRecord.state === 'processing') {
-      return await waitForTikTokStatus(
-        post,
-        accessToken,
-        currentRecord.externalId,
-        currentRecord,
-      );
-    }
-
     const plan = planTikTokChunks(size);
-    let uploadUrl = currentRecord?.uploadUrl
+    const uploadUrl = currentRecord?.uploadUrl
       ? validateUploadUrl(currentRecord.uploadUrl)
       : undefined;
-    let publishId = currentRecord?.externalId;
+    const publishId = currentRecord?.externalId;
     let uploadedBytes = currentRecord?.uploadedBytes ?? 0;
     const startedAt = currentRecord?.startedAt ?? new Date().toISOString();
     if (!uploadUrl || !publishId) {
       if (process.env.TIKTOK_CLIENT_AUDITED !== 'true') {
-        const withinLimit = await reserveTikTokPostingUser(post.userId);
+        const account = await getDefaultSocialAccountForWorkspace(post.workspaceId, 'tiktok', post.destinations?.find(d => d.platform === 'tiktok')?.accountId);
+        if (!account) throw new TikTokPublishError('A conta TikTok foi desconectada.');
+        const withinLimit = await reserveTikTokPostingUser(`tiktok:${account.platformAccountId}`);
         if (!withinLimit) {
           throw new TikTokPublishError(
             'O limite do app TikTok não auditado foi atingido: no máximo cinco contas podem publicar em uma janela de 24 horas.',
           );
         }
       }
-      const session = await startTikTokUpload(
-        accessToken,
-        post,
-        size,
-        plan.chunkSize,
-        plan.totalChunkCount,
-      );
-      uploadUrl = session.uploadUrl;
-      publishId = session.publishId;
-      uploadedBytes = 0;
+      const origin = process.env.PUBLIC_APP_URL ?? '';
+      if (!origin.startsWith('https://')) throw new TikTokPublishError('Configure PUBLIC_APP_URL com HTTPS e verifique o domínio no TikTok.');
+      const parts = post.mediaUrls[0].split('/');
+      const videoUrl = createSignedMediaUrl(origin, parts[3], parts[4]);
+      // Persist intent before sending. A crash without publish_id requires reconciliation.
+      const intent: PlatformPublishRecord = { platform: 'tiktok', state: 'processing', startedAt, mayHaveSucceeded: true };
+      if (!await updateClaimedPost(post._id, post.processingRunId, {publishStates: upsertPublishRecord(publishStates, intent)})) return 'lost-claim' as const;
+      publishStates = upsertPublishRecord(publishStates, intent);
+      const session = await startTikTokUpload(accessToken, post, videoUrl);
       const initialRecord: PlatformPublishRecord = {
         platform: 'tiktok',
-        state: 'uploading',
-        externalId: publishId,
-        uploadUrl,
-        uploadedBytes,
+        state: 'processing',
+        externalId: session.publishId,
+        mayHaveSucceeded: true,
         startedAt,
       };
       const saved = await updateClaimedPost(post._id, post.processingRunId, {
@@ -346,6 +345,8 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
         );
       }
       publishStates = upsertPublishRecord(publishStates, initialRecord);
+      const released = await releaseClaimedPost(post._id, post.processingRunId, new Date(Date.now() + RETRY_DELAY_MS));
+      return released ? 'waiting' as const : 'lost-claim' as const;
     }
 
     if (
@@ -470,9 +471,11 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
       console.error('Erro inesperado no publicador do TikTok:', error);
     }
 
+    const latestRecord = publishStates.find(record => record.platform === 'tiktok');
+    mayHaveSucceeded = mayHaveSucceeded || latestRecord?.mayHaveSucceeded === true;
     if (
       retryable &&
-      !mayHaveSucceeded &&
+      (!mayHaveSucceeded || Boolean(latestRecord?.externalId && latestRecord.state === 'processing')) &&
       post.attempts < MAX_TRANSIENT_RETRIES
     ) {
       const delay = RETRY_DELAY_MS * Math.max(1, 2 ** post.attempts);
@@ -488,9 +491,6 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
     if (mayHaveSucceeded) {
       message = `Resultado incerto: ${message} O post não será reenviado automaticamente.`;
     }
-    const latestRecord = publishStates.find(
-      (record) => record.platform === 'tiktok',
-    );
     const failedRecord = upsertPublishRecord(publishStates, {
       ...(latestRecord ?? currentRecord ?? { platform: 'tiktok' as const }),
       state: 'failed',

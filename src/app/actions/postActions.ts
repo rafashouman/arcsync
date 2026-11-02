@@ -1,4 +1,5 @@
 'use server';
+import { listPostAccounts } from './destinationActions';
 
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/src/libs/authSession';
@@ -56,6 +57,11 @@ export async function createScheduledPost(
     if (typeof data === 'string') {
       return { success: false, error: data };
     }
+    if (!saveAsDraft && !data.destinations?.length) return { success:false, error:'Edite o post e selecione as contas de destino.' };
+    if (data.destinations?.some(d => d.accountId)) {
+      const { accounts } = await listPostAccounts();
+      if (data.destinations.some(d => d.accountId && !accounts.some(a => a.id === d.accountId && a.platform === d.platform))) return {success:false,error:'Conta de destino indisponível nesta equipe.'};
+    }
     const approvalStatus = !saveAsDraft && requiresPostApproval(workspace.role)
       ? 'pending'
       : 'not_required';
@@ -67,6 +73,7 @@ export async function createScheduledPost(
       approvalStatus,
     );
     revalidatePath('/');
+    revalidatePath('/calendar');
     revalidatePath('/approvals');
     return { success: true, post };
   } catch (error) {
@@ -103,10 +110,15 @@ export async function updateScheduledPost(
       getMediaOwnerKey(workspace.workspaceId),
       saveAsDraft,
       Date.now(),
-      source.mediaUrls,
+      [...source.mediaUrls, ...(source.destinations ?? []).flatMap(d => d.mediaUrls ?? [])],
     );
     if (typeof data === 'string') {
       return { success: false, error: data };
+    }
+    if (!saveAsDraft && !data.destinations?.length) return { success:false, error:'Edite o post e selecione as contas de destino.' };
+    if (data.destinations?.some(d => d.accountId)) {
+      const { accounts } = await listPostAccounts();
+      if (data.destinations.some(d => d.accountId && !accounts.some(a => a.id === d.accountId && a.platform === d.platform))) return {success:false,error:'Conta de destino indisponível nesta equipe.'};
     }
     const approvalStatus = !saveAsDraft && requiresPostApproval(workspace.role)
       ? 'pending'
@@ -127,6 +139,7 @@ export async function updateScheduledPost(
     }
 
     revalidatePath('/');
+    revalidatePath('/calendar');
     revalidatePath('/approvals');
     return { success: true, post };
   } catch (error) {
@@ -170,6 +183,7 @@ export async function duplicatePostAsDraft(
 
     const input = validatePostInput(
       {
+        destinations: source.destinations?.map(d => ({...d, scheduledFor:undefined})),
         caption: source.caption,
         platforms: source.platforms,
         scheduledFor: null,
@@ -187,7 +201,7 @@ export async function duplicatePostAsDraft(
       getMediaOwnerKey(workspace.workspaceId),
       true,
       Date.now(),
-      source.mediaUrls,
+      [...source.mediaUrls, ...(source.destinations ?? []).flatMap(d => d.mediaUrls ?? [])],
     );
     if (typeof input === 'string') {
       return { success: false, error: input };
@@ -200,6 +214,7 @@ export async function duplicatePostAsDraft(
       'draft',
     );
     revalidatePath('/');
+    revalidatePath('/calendar');
     return { success: true, post };
   } catch (error) {
     console.error('Erro ao duplicar post como rascunho:', error);
@@ -239,10 +254,12 @@ export async function retryFailedPost(
       ? failedPlatforms
       : source.platforms;
     for (const platform of retryPlatforms) {
+      const destination = source.destinations?.find(d => d.platform === platform);
+      const destinationCaption = destination?.youtube ? `${destination.youtube.title}\n${destination.youtube.description}` : destination?.caption || source.caption;
       const text = platform === 'tiktok'
-        ? source.tiktokTitle?.trim() || source.caption
-        : source.caption;
-      const issue = getPublishingIssue(platform, text, source.mediaUrls);
+        ? source.tiktokTitle?.trim() || destinationCaption
+        : destinationCaption;
+      const issue = getPublishingIssue(platform, text, source.destinations?.find(d => d.platform === platform)?.mediaUrls ?? source.mediaUrls);
       if (issue) return { success: false, error: issue };
       if (
         platform === 'tiktok' &&
@@ -268,6 +285,7 @@ export async function retryFailedPost(
     }
 
     revalidatePath('/');
+    revalidatePath('/calendar');
     return { success: true, post };
   } catch (error) {
     console.error('Erro ao tentar novamente a publicação:', error);
@@ -309,6 +327,7 @@ export async function reschedulePostToDay(
       };
     }
 
+    if (post.destinations?.some(d => d.scheduledFor)) return {success:false,error:'Este post tem horários por rede. Edite os destinos para reagendar.'};
     const timeZone =
       typeof post.timeZone === 'string' && isValidTimeZone(post.timeZone)
         ? post.timeZone
@@ -347,6 +366,7 @@ export async function reschedulePostToDay(
     }
 
     revalidatePath('/');
+    revalidatePath('/calendar');
     return { success: true };
   } catch (error) {
     console.error('Erro ao reagendar post:', error);
@@ -377,6 +397,7 @@ export async function deleteScheduledPost(id: string): Promise<ActionResult> {
     }
 
     revalidatePath('/');
+    revalidatePath('/calendar');
     revalidatePath('/approvals');
     return { success: true, post };
   } catch (error) {
@@ -441,6 +462,7 @@ export async function reviewWorkspacePost(
       return { success: false, error: 'A publicação mudou de estado durante a revisão.' };
     }
     revalidatePath('/');
+    revalidatePath('/calendar');
     revalidatePath('/approvals');
     return { success: true };
   } catch (error) {

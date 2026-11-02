@@ -26,13 +26,41 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:3000/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 30s
 
+  scheduler:
+    profiles: [operations]
+    image: feedsync:${FEEDSYNC_IMAGE_TAG:?Set FEEDSYNC_IMAGE_TAG in .env}
+    env_file:
+      - ${FEEDSYNC_ENV_FILE:?Set FEEDSYNC_ENV_FILE in .env}
+    environment:
+      QUEUE_APP_URL: http://app:3000
+    command: [node, ops/queue-services.mjs, scheduler]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    depends_on:
+      app:
+        condition: service_healthy
+
+  monitor:
+    profiles: [operations]
+    image: feedsync:${FEEDSYNC_IMAGE_TAG:?Set FEEDSYNC_IMAGE_TAG in .env}
+    env_file:
+      - ${FEEDSYNC_ENV_FILE:?Set FEEDSYNC_ENV_FILE in .env}
+    environment:
+      QUEUE_APP_URL: http://app:3000
+    command: [node, ops/queue-services.mjs, monitor]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+
   env-check:
+    profiles: [checks]
     image: feedsync-check:${FEEDSYNC_IMAGE_TAG:?Set FEEDSYNC_IMAGE_TAG in .env}
     build:
       context: .

@@ -1,4 +1,6 @@
 import 'server-only';
+import { youtubeMetadata } from '@/src/libs/youtubeMetadata';
+import type { YouTubeOptions } from '@/src/types/post';
 
 import { open } from 'fs/promises';
 import path from 'path';
@@ -19,7 +21,6 @@ import {
   getMediaOwnerKey,
 } from '@/src/libs/mediaStorage';
 import {
-  getYouTubeMetadata,
   upsertPublishRecord,
   YOUTUBE_CHUNK_SIZE,
   YOUTUBE_MINIMUM_CHUNK_SIZE,
@@ -119,8 +120,8 @@ function getMediaDetails(post: ClaimedPost) {
   return { filePath, contentType };
 }
 
-async function getValidAccessToken(workspaceId: string) {
-  const account = await getDefaultSocialAccountForWorkspace(workspaceId, 'youtube');
+async function getValidAccessToken(workspaceId: string, accountId?: string) {
+  const account = await getDefaultSocialAccountForWorkspace(workspaceId, 'youtube', accountId);
   if (!account) {
     throw new YouTubePublishError('Nenhuma conta padrão do YouTube está conectada.');
   }
@@ -177,8 +178,9 @@ async function startResumableUpload(
   caption: string,
   contentType: string,
   fileSize: number,
+  options?: YouTubeOptions,
 ) {
-  const metadata = getYouTubeMetadata(caption);
+  const metadata = youtubeMetadata(caption, options);
   const url = new URL('https://www.googleapis.com/upload/youtube/v3/videos');
   url.searchParams.set('uploadType', 'resumable');
   url.searchParams.set('part', 'snippet,status');
@@ -193,14 +195,7 @@ async function startResumableUpload(
         'X-Upload-Content-Length': String(fileSize),
         'X-Upload-Content-Type': contentType,
       },
-      body: JSON.stringify({
-        snippet: {
-          title: metadata.title,
-          description: metadata.description,
-          categoryId: '22',
-        },
-        status: { privacyStatus: 'public' },
-      }),
+      body: JSON.stringify(metadata),
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(20_000),
@@ -380,7 +375,7 @@ export async function publishClaimedYouTubePost(post: ClaimedPost) {
       await fileHandle.close();
     }
 
-    const accessToken = await getValidAccessToken(post.workspaceId);
+    const accessToken = await getValidAccessToken(post.workspaceId, post.destinations?.find(d => d.platform === 'youtube')?.accountId);
     let uploadUrl = currentRecord?.uploadUrl
       ? validateUploadSessionUrl(currentRecord.uploadUrl)
       : undefined;
@@ -391,6 +386,7 @@ export async function publishClaimedYouTubePost(post: ClaimedPost) {
         post.caption,
         contentType,
         file.length,
+        post.destinations?.find(d => d.platform === 'youtube')?.youtube,
       );
       const initialRecord: PlatformPublishRecord = {
         platform: 'youtube',

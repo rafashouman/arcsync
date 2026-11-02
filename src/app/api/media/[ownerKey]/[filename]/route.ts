@@ -7,6 +7,7 @@ import {
   getMediaOwnerKey,
   verifySignedMediaUrl,
 } from '@/src/libs/mediaStorage';
+import { getWorkspaceContext } from '@/src/data/workspaces';
 import { getCurrentUser } from '@/src/libs/authSession';
 
 interface RouteContext {
@@ -53,7 +54,8 @@ async function serveMedia(request: Request, { params }: RouteContext, headOnly =
     if (!user) {
       return new Response('Não autenticado.', { status: 401 });
     }
-    if (ownerKey !== getMediaOwnerKey(user.uid)) {
+    const workspace = await getWorkspaceContext(user.uid, user.email);
+    if (ownerKey !== getMediaOwnerKey(user.uid) && ownerKey !== getMediaOwnerKey(workspace.workspaceId)) {
       return new Response('Arquivo não encontrado.', { status: 404 });
     }
   }

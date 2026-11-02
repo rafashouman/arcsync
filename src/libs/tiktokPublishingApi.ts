@@ -168,6 +168,39 @@ export async function initializeTikTokVideoUpload(
   };
 }
 
+/** Server-hosted media must be downloaded by TikTok from a verified domain. */
+export async function initializeTikTokVideoFromUrl(
+  accessToken: string,
+  postInfo: TikTokPostInfo,
+  videoUrl: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ publishId: string }> {
+  const url = new URL(videoUrl);
+  if (url.protocol !== 'https:' || url.username || url.password || url.hash) {
+    throw new TikTokApiError('O vídeo do TikTok precisa de uma URL HTTPS pública no domínio verificado.');
+  }
+  const data = await requestJson(fetcher, new URL(`${TIKTOK_API_ROOT}video/init/`), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({
+      post_info: {
+        title: postInfo.title,
+        privacy_level: postInfo.privacyLevel,
+        disable_comment: !postInfo.allowComments,
+        disable_duet: !postInfo.allowDuet,
+        disable_stitch: !postInfo.allowStitch,
+        brand_organic_toggle: postInfo.brandOrganic,
+        brand_content_toggle: postInfo.brandContent,
+      },
+      source_info: { source: 'PULL_FROM_URL', video_url: url.toString() },
+    }),
+  }, 'O TikTok não confirmou o início da publicação por URL.');
+  if (typeof data.publish_id !== 'string' || !data.publish_id || data.publish_id.length > 64) {
+    throw new TikTokApiError('O TikTok não retornou um identificador válido de publicação.');
+  }
+  return { publishId: data.publish_id };
+}
+
 export async function uploadTikTokVideoChunk(
   uploadUrl: string,
   chunk: Buffer,

@@ -31,7 +31,7 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
 
   const workspace = await getWorkspaceContext(user.uid, user.email);
   const canManageAccounts = canManageWorkspace(workspace.role);
-  const [{ meta, social }, instagramAccounts, tiktokAccounts, youtubeAccounts] = await Promise.all([
+  const [{ meta, social }, instagramAccounts, tiktokAccounts, youtubeAccounts, facebookAccounts] = await Promise.all([
     searchParams,
     process.env.MONGODB_URI
       ? listInstagramAccountsForWorkspace(workspace.workspaceId)
@@ -42,6 +42,7 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
     process.env.MONGODB_URI
       ? listSocialAccountsForWorkspace(workspace.workspaceId, 'youtube')
       : Promise.resolve([]),
+    process.env.MONGODB_URI ? listSocialAccountsForWorkspace(workspace.workspaceId, 'facebook') : Promise.resolve([]),
   ]);
   const isOAuthConfigured = Boolean(
     process.env.INSTAGRAM_APP_ID &&
@@ -49,6 +50,7 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
       process.env.INSTAGRAM_REDIRECT_URI,
   );
   const socialOAuthConfigured: Record<OAuthPlatform, boolean> = {
+    facebook: Boolean(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.env.FACEBOOK_REDIRECT_URI),
     tiktok: Boolean(
       process.env.TIKTOK_CLIENT_KEY &&
         process.env.TIKTOK_CLIENT_SECRET &&
@@ -70,7 +72,7 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
             className="inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
           >
             <ArrowLeft size={16} />
-            Voltar ao calendário
+            Voltar ao início
           </Link>
           <SignOutButton email={user.email} />
         </header>
@@ -97,6 +99,7 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
         />
         <OAuthSocialAccounts
           accounts={{
+            facebook: facebookAccounts,
             tiktok: tiktokAccounts,
             youtube: youtubeAccounts,
           }}

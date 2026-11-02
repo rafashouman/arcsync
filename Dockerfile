@@ -28,6 +28,7 @@ ARG APP_GID=1000
 COPY --from=builder --chown=${APP_UID}:${APP_GID} /app/public ./public
 COPY --from=builder --chown=${APP_UID}:${APP_GID} /app/.next/standalone ./
 COPY --from=builder --chown=${APP_UID}:${APP_GID} /app/.next/static ./.next/static
+COPY --from=builder --chown=${APP_UID}:${APP_GID} /app/ops/queue-services.mjs ./ops/queue-services.mjs
 RUN mkdir -p /app/uploads /app/.next/cache \
     && chown -R ${APP_UID}:${APP_GID} /app/uploads /app/.next/cache
 USER ${APP_UID}:${APP_GID}

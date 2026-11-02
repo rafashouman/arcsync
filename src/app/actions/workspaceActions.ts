@@ -139,6 +139,7 @@ export async function changeWorkspaceMemberRole(
     if (!updated) return { success: false, error: 'Membro não encontrado.' };
     revalidatePath('/settings/team');
     revalidatePath('/');
+    revalidatePath('/calendar');
     return { success: true };
   } catch (error) {
     console.error('Erro ao alterar papel de membro:', error);
@@ -167,6 +168,7 @@ export async function removeWorkspaceMemberAction(
     if (!removed) return { success: false, error: 'Membro não encontrado.' };
     revalidatePath('/settings/team');
     revalidatePath('/');
+    revalidatePath('/calendar');
     return { success: true };
   } catch (error) {
     console.error('Erro ao remover membro da equipe:', error);
@@ -180,6 +182,7 @@ export async function switchWorkspaceAction(workspaceId: string) {
   const switched = await switchActiveWorkspace(user.uid, workspaceId);
   if (!switched) redirect('/?workspace=not-found');
   revalidatePath('/');
+    revalidatePath('/calendar');
   revalidatePath('/settings/team');
   redirect('/');
 }
@@ -200,6 +203,7 @@ export async function acceptWorkspaceInviteAction(token: string) {
   );
   if (!accepted) redirect('/?invite=invalid-or-expired');
   revalidatePath('/');
+    revalidatePath('/calendar');
   revalidatePath('/settings/team');
   redirect('/');
 }

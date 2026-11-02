@@ -1,3 +1,6 @@
+import { POST_FORMATS, formatIssue } from '@/src/libs/postFormats';
+import { validateYouTubeOptions } from '@/src/libs/youtubeMetadata';
+import type { PostDestination } from '@/src/types/post';
 import {
   SOCIAL_PLATFORMS,
   type SchedulePostInput,
@@ -81,6 +84,11 @@ export function getPublishingIssue(
   caption: string,
   mediaUrls: string[],
 ): string | null {
+  if (platform === 'facebook') {
+    if (mediaUrls.length > 1 || mediaUrls.some(url => !/\.(jpg|png)$/i.test(url))) return 'Facebook aceita texto ou uma foto JPG/PNG neste MVP.';
+    if (!caption.trim() && !mediaUrls.length) return 'Adicione texto ou uma foto para publicar no Facebook.';
+    return null;
+  }
   if (platform === 'instagram') {
     return getInstagramPublishingIssue(caption, mediaUrls);
   }
@@ -214,15 +222,53 @@ export function validatePostInput(
   ) {
     return 'Os arquivos de mídia enviados são inválidos.';
   }
+  let destinations: PostDestination[] | undefined;
+  if (data.destinations !== undefined) {
+    if (!Array.isArray(data.destinations) || data.destinations.length !== new Set(data.platforms).size) return 'Selecione um destino para cada rede.';
+    destinations = [];
+    for (const raw of data.destinations) {
+      if (!raw || typeof raw !== 'object') return 'Destino inválido.';
+      const d = raw as Record<string, unknown>;
+      if (!isSocialPlatform(d.platform) || !data.platforms.includes(d.platform) || destinations.some(x => x.platform === d.platform)) return 'Rede de destino inválida ou repetida.';
+      if (typeof d.accountId !== 'string' || (d.accountId !== '' && !/^[a-f\d]{24}$/i.test(d.accountId))) return 'Conta de destino inválida.';
+      if (!saveAsDraft && !d.accountId) return 'Selecione uma conta conectada para cada rede. Sem credenciais, salve como rascunho.';
+      if (typeof d.format !== 'string' || !POST_FORMATS[d.platform].some(f => f.value === d.format)) return 'Selecione o formato.';
+      let destinationTime: string | undefined;
+      if (d.scheduledFor !== undefined && d.scheduledFor !== '') {
+        if (typeof d.scheduledFor !== 'string' || !Number.isFinite(Date.parse(d.scheduledFor)) || (!saveAsDraft && Date.parse(d.scheduledFor) <= now)) return 'Horário do destino inválido ou passado.';
+        destinationTime = new Date(d.scheduledFor).toISOString();
+      }
+      let destinationMedia: string[] | undefined;
+      if (d.mediaUrls !== undefined) {
+        if (!Array.isArray(d.mediaUrls) || d.mediaUrls.length > 10 || !d.mediaUrls.every(url => typeof url === 'string' && /^\/api\/media\/[a-f\d]{64}\/[a-f\d-]{36}\.(jpg|png|webp|gif|mp4|mov|webm)$/i.test(url) && (allowedOwnerKeys.some(key => url.startsWith(`/api/media/${key}/`)) || existingMediaUrls.includes(url)))) return 'Mídias do destino inválidas.';
+        destinationMedia = [...d.mediaUrls];
+      }
+      const issue = formatIssue(d.platform, d.format, destinationMedia ?? data.mediaUrls);
+      if (issue && !saveAsDraft) return issue;
+      if (d.caption !== undefined && (typeof d.caption !== 'string' || d.caption.length > 5000)) return 'Legenda do destino inválida.';
+      let youtube: PostDestination['youtube'];
+      if (d.youtube !== undefined) {
+        if (d.platform !== 'youtube') return 'Configurações do YouTube em uma rede inválida.';
+        const youtubeIssue = validateYouTubeOptions(d.youtube);
+        if (youtubeIssue) return youtubeIssue;
+        const options = d.youtube as NonNullable<PostDestination['youtube']>;
+        youtube = { title: options.title.trim(), description: options.description, privacyStatus: options.privacyStatus, madeForKids: options.madeForKids, containsSyntheticMedia: options.containsSyntheticMedia };
+      }
+      destinations.push({youtube, scheduledFor: destinationTime ?? scheduledFor ?? undefined, mediaUrls: destinationMedia, platform:d.platform, accountId:d.accountId, format:d.format as PostDestination['format'], caption: d.caption as string | undefined});
+    }
+  }
   if (!saveAsDraft) {
     for (const platform of orderedPlatforms(data.platforms)) {
+      const destinationMedia = destinations?.find(d => d.platform === platform)?.mediaUrls ?? data.mediaUrls;
+      const destination = destinations?.find(d => d.platform === platform);
+      const destinationCaption = destination?.youtube ? `${destination.youtube.title}\n${destination.youtube.description}` : destination?.caption || data.caption;
       const issue =
         platform === 'tiktok'
           ? getTikTokPublishingIssue(
-              tiktokTitle.trim() || data.caption,
-              data.mediaUrls,
+              tiktokTitle.trim() || destinationCaption,
+              destinationMedia,
             )
-          : getPublishingIssue(platform, data.caption, data.mediaUrls);
+          : getPublishingIssue(platform, destinationCaption, destinationMedia);
       if (issue) return issue;
     }
     if (data.platforms.includes('tiktok')) {
@@ -260,9 +306,10 @@ export function validatePostInput(
   }
 
   return {
+    ...(destinations ? { destinations } : {}),
     caption: data.caption.trim(),
     platforms: [...new Set(data.platforms)],
-    scheduledFor,
+    scheduledFor: scheduledFor && destinations?.length ? new Date(Math.min(...destinations.map(d => Date.parse(d.scheduledFor || scheduledFor!)))).toISOString() : scheduledFor,
     timeZone: data.timeZone,
     mediaUrls: [...data.mediaUrls],
     tiktokTitle: data.platforms.includes('tiktok') ? tiktokTitle.trim() : null,

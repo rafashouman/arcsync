@@ -9,10 +9,10 @@ import type {
   OAuthTokenSet,
 } from '@/src/libs/socialOAuth';
 
-export type OAuthPlatform = 'tiktok' | 'youtube';
+export type OAuthPlatform = 'tiktok' | 'youtube' | 'facebook';
 
 export function isOAuthPlatform(value: unknown): value is OAuthPlatform {
-  return value === 'tiktok' || value === 'youtube';
+  return value === 'tiktok' || value === 'youtube' || value === 'facebook';
 }
 
 export interface SocialAccountSummary {
@@ -94,7 +94,7 @@ export async function saveSocialAccount(
       $set: {
         accountName: account.accountName,
         encryptedAccessToken: encryptSocialToken(account.accessToken),
-        encryptedRefreshToken: encryptSocialToken(account.refreshToken),
+        encryptedRefreshToken: account.refreshToken ? encryptSocialToken(account.refreshToken) : undefined,
         tokenIssuedAt: new Date(),
         expiresAt: account.accessTokenExpiresAt,
         refreshExpiresAt: account.refreshTokenExpiresAt,
@@ -209,12 +209,13 @@ export async function setDefaultSocialAccountForWorkspace(
 export async function getDefaultSocialAccountForWorkspace(
   workspaceId: string,
   platform: OAuthPlatform,
+  accountId?: string,
 ) {
   await requireDatabase();
   const account = await Account.findOne({
     ...workspaceAccountFilter(workspaceId),
     platform,
-    isDefault: true,
+    ...(accountId ? { _id: accountId } : { isDefault: true }),
   })
     .select('+encryptedAccessToken +encryptedRefreshToken')
     .lean();
@@ -222,6 +223,7 @@ export async function getDefaultSocialAccountForWorkspace(
   return {
     id: String(account._id),
     accountName: account.accountName as string,
+    platformAccountId: account.platformAccountId,
     permissions: (account.permissions as string[] | undefined) ?? [],
     encryptedAccessToken: account.encryptedAccessToken as string,
     encryptedRefreshToken: (account.encryptedRefreshToken as string | undefined) ?? null,

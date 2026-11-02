@@ -3,6 +3,8 @@ import type { PlatformPublishRecord } from '@/src/libs/publishPlanning';
 import type { TikTokPrivacyLevel } from '@/src/types/post';
 
 export interface IPost extends Document {
+  deletedAt?: Date;
+  history?: import('@/src/types/post').PostHistoryEntry[];
   userId: string;
   workspaceId?: string;
   mediaOwnerKeys: string[];
@@ -13,6 +15,7 @@ export interface IPost extends Document {
     comment?: string;
     at: Date;
   }[];
+  destinations?: import('@/src/types/post').PostDestination[];
   caption?: string;
   mediaUrls: string[];
   tiktokTitle?: string | null;
@@ -24,7 +27,7 @@ export interface IPost extends Document {
   tiktokBrandOrganic?: boolean;
   tiktokBrandContent?: boolean;
   tiktokConsentAt?: Date | null;
-  platforms: ('instagram' | 'tiktok' | 'youtube')[];
+  platforms: ('instagram' | 'tiktok' | 'youtube' | 'facebook')[];
   scheduledFor?: Date;
   timeZone?: string;
   status: 'draft' | 'pending' | 'processing' | 'published' | 'failed';
@@ -46,7 +49,7 @@ const PublishStateSchema = new Schema(
   {
     platform: {
       type: String,
-      enum: ['instagram', 'tiktok', 'youtube'],
+      enum: ['instagram', 'tiktok', 'youtube', 'facebook'],
       required: true,
     },
     state: {
@@ -71,7 +74,7 @@ const ApprovalHistorySchema = new Schema(
       enum: ['requested', 'approved', 'rejected'],
       required: true,
     },
-    userId: { type: String, required: true },
+  userId: { type: String, required: true },
     comment: { type: String, maxlength: 1000 },
     at: { type: Date, required: true },
   },
@@ -79,6 +82,8 @@ const ApprovalHistorySchema = new Schema(
 );
 
 const PostSchema = new Schema<IPost>({
+  deletedAt: {type:Date, default:null, index:true},
+  history: { type: [{ at: String, event: String, runId: String, states: [{ platform: String, state: String }] }], default: [] },
   userId: { type: String, required: true, index: true },
   workspaceId: { type: String, index: true },
   mediaOwnerKeys: { type: [String], default: [] },
@@ -89,6 +94,7 @@ const PostSchema = new Schema<IPost>({
     index: true,
   },
   approvalHistory: { type: [ApprovalHistorySchema], default: [] },
+  destinations: { type: [{ platform: String, accountId: String, format: String, caption: String, scheduledFor: String, mediaUrls: { type: [String], default: undefined }, youtube: { type: new Schema({ title: String, description: String, privacyStatus: { type: String, enum: ['private', 'unlisted', 'public'] }, madeForKids: Boolean, containsSyntheticMedia: Boolean }, { _id: false }), default: undefined } }], default: undefined },
   caption: { type: String, default: '' },
   mediaUrls: { type: [String], default: [] },
   tiktokTitle: { type: String, default: null },
@@ -106,7 +112,7 @@ const PostSchema = new Schema<IPost>({
   tiktokConsentAt: { type: Date, default: null },
   platforms: [{ 
     type: String, 
-    enum: ['instagram', 'tiktok', 'youtube'],
+    enum: ['instagram', 'tiktok', 'youtube', 'facebook'],
     required: true 
   }],
   scheduledFor: { type: Date },

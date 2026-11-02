@@ -1,0 +1,1 @@
+import { registerHooks } from 'node:module'; registerHooks({resolve(specifier, context, next) { if (specifier === 'server-only') return {url: new URL('./server-only-empty.mjs', import.meta.url).href, shortCircuit:true}; return next(specifier,context); }});

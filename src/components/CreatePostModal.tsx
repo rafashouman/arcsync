@@ -1,6 +1,10 @@
 'use client';
+import {historyEventLabel} from '@/src/libs/postHistory';
 
 import Image from 'next/image';
+import { listPostAccounts } from '@/src/app/actions/destinationActions';
+import { POST_FORMATS } from '@/src/libs/postFormats';
+import type { PostDestination } from '@/src/types/post';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -28,6 +32,7 @@ import {
 import { uploadMediaFiles } from '@/src/app/actions/uploadActions';
 import {
   InstagramIcon,
+  FacebookIcon,
   TikTokIcon,
   YoutubeIcon,
 } from '@/src/components/icons/SocialIcons';
@@ -52,6 +57,7 @@ const platforms: {
   Icon: typeof InstagramIcon;
   activeClass: string;
 }[] = [
+  {id:'facebook',label:'Facebook',Icon:FacebookIcon,activeClass:'border-blue-400/40 bg-blue-400/10 text-blue-200'},
   {
     id: 'instagram',
     label: 'Instagram',
@@ -154,6 +160,15 @@ function PostModalContent({
 }) {
   const router = useRouter();
   const { closeModal, openModal } = useSchedulerStore();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog?.showModal();
+    return () => {dialog?.close();document.body.style.overflow = overflow;previous?.focus();};
+  }, []);
   const [timeZone, setTimeZone] = useState(() => {
     const storedTimeZone = selectedPost?.timeZone;
     return typeof storedTimeZone === 'string' && isValidTimeZone(storedTimeZone)
@@ -163,6 +178,18 @@ function PostModalContent({
   const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(
     () => selectedPost?.platforms ?? [],
   );
+  const [destinations, setDestinations] = useState<PostDestination[]>(selectedPost?.destinations ?? []);
+  const [accounts, setAccounts] = useState<Awaited<ReturnType<typeof listPostAccounts>>['accounts']>([]);
+  const [accountNotice, setAccountNotice] = useState('Carregando contas...');
+  useEffect(() => { let active = true; void listPostAccounts().then(result => { if (active) { setAccounts(result.accounts); setAccountNotice(result.error || (result.accounts.length ? '' : 'Conecte as redes na etapa final. Por enquanto, salve como rascunho.')); } }).catch(() => { if(active) setAccountNotice('Não foi possível carregar as contas.'); }); return () => { active = false; }; }, []);
+  function updateDestination(platform: SocialPlatform, patch: Partial<PostDestination>) {
+    if (platform === 'tiktok') {
+      setTikTokConsent(false);
+      if ('mediaUrls' in patch) setVideoDurationSeconds(null);
+      if ('accountId' in patch) { setTikTokCreatorInfo(null); setTikTokPrivacyLevel(''); }
+    }
+    setDestinations(current => [...current.filter(d => d.platform !== platform), { platform, accountId:'', format:(platform === 'instagram' || platform === 'facebook') ? 'feed' : 'video', ...current.find(d => d.platform === platform), ...patch }]);
+  }
   const [previewPlatform, setPreviewPlatform] = useState<SocialPlatform>(
     () => selectedPost?.platforms?.[0] ?? 'instagram',
   );
@@ -205,7 +232,7 @@ function PostModalContent({
   const [tiktokBrandContent, setTikTokBrandContent] = useState(
     selectedPost?.tiktokBrandContent ?? false,
   );
-  const [tiktokConsent, setTikTokConsent] = useState(false);
+  const [tiktokConsentSelection, setTikTokConsent] = useState<string | false>(false);
   const [tiktokCreatorInfo, setTikTokCreatorInfo] = useState<{
     creatorNickname: string;
     privacyLevelOptions: string[];
@@ -228,12 +255,26 @@ function PostModalContent({
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasTikTokSelected = selectedPlatforms.includes('tiktok');
+  const tiktokConsentKey = JSON.stringify({destination: destinations.find(d => d.platform === 'tiktok'), caption, mediaUrls, tiktokTitle, tiktokPrivacyLevel, tiktokAllowComments, tiktokAllowDuet, tiktokAllowStitch, tiktokCommercialContent, tiktokBrandOrganic, tiktokBrandContent});
+  const tiktokConsent = tiktokConsentSelection === tiktokConsentKey;
+  const tiktokDisclosureMissing = hasTikTokSelected && tiktokCommercialContent && !tiktokBrandOrganic && !tiktokBrandContent;
 
+  const tiktokAccountId = destinations.find(d => d.platform === 'tiktok')?.accountId;
+  const tiktokMediaUrl = (destinations.find(d => d.platform === 'tiktok')?.mediaUrls ?? mediaUrls)[0];
   useEffect(() => {
-    if (!hasTikTokSelected) return;
+    if (!hasTikTokSelected || !tiktokMediaUrl) return;
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => setVideoDurationSeconds(Number.isFinite(video.duration) ? video.duration : null);
+    video.onerror = () => setVideoDurationSeconds(null);
+    video.src = tiktokMediaUrl;
+    return () => { video.onloadedmetadata = null; video.onerror = null; video.removeAttribute('src'); video.load(); };
+  }, [hasTikTokSelected, tiktokMediaUrl]);
+  useEffect(() => {
+    if (!hasTikTokSelected || !tiktokAccountId) return;
 
     let active = true;
-    void getTikTokCreatorInfoForPost()
+    void getTikTokCreatorInfoForPost(tiktokAccountId)
       .then((result) => {
         if (!active) return;
         if (!result.success) {
@@ -274,7 +315,7 @@ function PostModalContent({
     return () => {
       active = false;
     };
-  }, [hasTikTokSelected]);
+  }, [hasTikTokSelected, tiktokAccountId]);
 
   const isBusy = pendingAction !== null;
   const lockedPost =
@@ -282,12 +323,15 @@ function PostModalContent({
     selectedPost?.status === 'processing' ||
     selectedPost?.publishMayHaveSucceeded === true;
   const timeZoneOptions = [...new Set([timeZone, ...COMMON_TIME_ZONES])].sort();
+  const previewDestinationTime = destinations.find(d => d.platform === previewPlatform)?.scheduledFor;
+  const previewDateTime = previewDestinationTime ? getDateTimeInputValues(previewDestinationTime,timeZone) : {date:scheduledDate,time};
+  const previewMediaUrls = destinations.find(d => d.platform === previewPlatform)?.mediaUrls ?? mediaUrls;
   const previewPlatformDetails =
     platforms.find((platform) => platform.id === previewPlatform) ??
     platforms[0];
   const instagramPublishingIssue = getInstagramPublishingIssue(
-    caption,
-    mediaUrls,
+    destinations.find(d => d.platform === 'instagram')?.caption || caption,
+    destinations.find(d => d.platform === 'instagram')?.mediaUrls ?? mediaUrls,
   );
   const minDateValue = getDateTimeInputValues(
     new Date().toISOString(),
@@ -358,7 +402,7 @@ function PostModalContent({
     }
   };
 
-  const handleSave = async (asDraft: boolean) => {
+  const handleSave = async (asDraft: boolean, publishNow = false) => {
     if (!asDraft && selectedPlatforms.length === 0) {
       setErrorMessage('Selecione ao menos uma rede social.');
       return;
@@ -381,8 +425,8 @@ function PostModalContent({
         return;
       }
       if (
-        videoDurationSeconds === null ||
-        videoDurationSeconds > tiktokCreatorInfo.maxVideoPostDurationSeconds
+        (videoDurationSeconds === null ||
+        videoDurationSeconds > tiktokCreatorInfo.maxVideoPostDurationSeconds)
       ) {
         setErrorMessage(
           videoDurationSeconds === null
@@ -401,7 +445,7 @@ function PostModalContent({
 
     const scheduledFor = asDraft
       ? null
-      : zonedDateTimeToIso(scheduledDate, time, timeZone);
+      : publishNow ? new Date(Date.now() + 30_000).toISOString() : zonedDateTimeToIso(scheduledDate, time, timeZone);
 
     if (!asDraft) {
       if (!scheduledFor) {
@@ -422,6 +466,7 @@ function PostModalContent({
       const input = {
         caption,
         platforms: selectedPlatforms,
+        destinations: selectedPlatforms.map(platform => destinations.find(d => d.platform === platform) ?? {platform, accountId:'', format:(platform === 'instagram' || platform === 'facebook') ? 'feed' : 'video'}),
         scheduledFor,
         timeZone,
         mediaUrls,
@@ -536,8 +581,30 @@ function PostModalContent({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#05070c]/75 p-3 backdrop-blur-sm sm:p-5"
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="post-modal-title"
+      aria-modal="true"
+      onCancel={event => {
+        event.preventDefault();
+        if (!isBusy && !isUploading) closeModal();
+      }}
+      onKeyDown={event => {
+        if (event.key !== 'Tab') return;
+        const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+          'button, a[href], input, select, textarea, [tabindex]',
+        )).filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && event.target === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && event.target === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
+      className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center bg-[#05070c]/75 p-3 text-slate-200 backdrop-blur-sm sm:p-5"
       onMouseDown={(event) => {
         if (
           event.target === event.currentTarget &&
@@ -549,9 +616,6 @@ function PostModalContent({
       }}
     >
       <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="post-modal-title"
         className="custom-scrollbar max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#11151f] shadow-2xl shadow-black/50"
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.07] bg-[#11151f]/95 px-5 py-4 backdrop-blur sm:px-7">
@@ -596,13 +660,22 @@ function PostModalContent({
                 className="mt-0.5 shrink-0 text-amber-200"
               />
               {selectedPost?.publishMayHaveSucceeded
-                ? 'A Meta pode ter publicado este post. Ele está bloqueado para evitar uma publicação duplicada.'
+                ? 'Uma rede pode ter publicado este post. Ele está bloqueado para evitar uma publicação duplicada.'
                 : 'Publicações em andamento ou já publicadas não podem ser alteradas.'}
             </div>
           )}
 
+          {selectedPost?.platformStatuses?.length ? <section aria-label="Resultado por rede" className="space-y-2 rounded-xl border border-white/10 p-4">
+            <h3 className="font-medium">Resultado por rede</h3>
+            {selectedPost.platformStatuses.map(result => <div key={result.platform} className="text-sm">
+              <strong className="capitalize">{result.platform}</strong>: {result.mayHaveSucceeded ? 'Resultado incerto — confira na rede antes de qualquer reenvio' : ({published:'Publicado',failed:'Falha',uploading:'Enviando',processing:'Processando'})[result.state]}
+              {result.error && <p className="text-amber-200">{result.error}</p>}
+              {result.state === 'published' && result.platform === 'youtube' && result.externalId && <a className="ml-2 underline" target="_blank" rel="noopener noreferrer" href={`https://www.youtube.com/watch?v=${encodeURIComponent(result.externalId)}`}>Ver publicação</a>}
+            </div>)}
+          </section> : null}
+          {selectedPost?.history?.length ? <details className="rounded border border-white/10 p-3"><summary>Histórico de processamento ({selectedPost.history.length})</summary><ol>{selectedPost.history.map((h,i) => <li key={i} className="py-1 text-xs">{h.at} — {historyEventLabel(h.event)} {h.states?.map(s => `${s.platform}: ${s.state}`).join(', ')}</li>)}</ol></details> : null}
           <fieldset
-            disabled={lockedPost || isBusy}
+            disabled={lockedPost || isBusy || isUploading}
             className="space-y-6"
           >
             <div>
@@ -637,6 +710,47 @@ function PostModalContent({
                 })}
               </div>
             </div>
+
+            {accountNotice && <p role="status" className="text-sm text-amber-200">{accountNotice}</p>}
+            {selectedPlatforms.map(platform => {
+              const d = destinations.find(item => item.platform === platform);
+              return <section key={platform} className="space-y-3 rounded-xl border border-white/10 p-4">
+                <h3 className="font-medium capitalize">{platform}</h3>
+                <label className="block text-sm">Conta de destino
+                  <select aria-label={`Conta ${platform}`} className="mt-1 w-full rounded bg-slate-900 p-2" value={d?.accountId ?? ''} onChange={e => updateDestination(platform, {accountId:e.target.value})}>
+                    <option value="">Selecione uma conta</option>
+                    {accounts.filter(a => a.platform === platform).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </label>
+                <label className="block text-sm">Horário próprio (no fuso {timeZone})
+                  <input type="datetime-local" aria-label={`Horário ${platform}`} className="mt-1 w-full rounded bg-slate-900 p-2" value={d?.scheduledFor ? (() => { const v = getDateTimeInputValues(d.scheduledFor, timeZone); return `${v.date}T${v.time}`; })() : ''} onChange={e => { const [date, time] = e.target.value.split('T'); const iso = date && time ? zonedDateTimeToIso(date,time,timeZone) : null; updateDestination(platform,{scheduledFor:iso ?? undefined}); }} />
+                </label>
+                <label className="block text-sm">Mídias próprias (opcional)
+                  <input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" aria-label={`Mídias ${platform}`} onChange={async e => { const files = Array.from(e.target.files ?? []); if (!files.length) return; setIsUploading(true); try { const form = new FormData(); files.forEach(file => form.append('files', file)); const result = await uploadMediaFiles(form); if (result.success) updateDestination(platform,{mediaUrls:result.urls}); else setErrorMessage(result.error ?? 'Falha no upload.'); } catch {setErrorMessage('Falha no upload do destino.');} finally {setIsUploading(false);} }} />
+                </label>
+                {d?.mediaUrls && <div className="text-xs">{d.mediaUrls.length} mídia(s) próprias <button type="button" onClick={() => updateDestination(platform,{mediaUrls:undefined})}>Usar mídias comuns</button></div>}
+                <label className="block text-sm">Tipo de publicação
+                  <select aria-label={`Formato ${platform}`} className="mt-1 w-full rounded bg-slate-900 p-2" value={d?.format ?? ((platform === 'instagram' || platform === 'facebook') ? 'feed' : 'video')} onChange={e => updateDestination(platform, {format:e.target.value as PostDestination['format']})}>
+                    {POST_FORMATS[platform].map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  </select>
+                </label>
+                {d?.format === 'story' && <p className="text-xs text-amber-200">Story aceita uma foto ou vídeo. A legenda não aparece no Story; prepare o texto na própria mídia. A disponibilidade depende da conta e das permissões da Meta.</p>}
+                {platform === 'youtube' && <div className="space-y-3">
+                  <p className="text-xs text-slate-400">Sem personalização, a primeira linha da legenda vira o título e o vídeo será privado.</p>
+                  <label className="flex gap-2 text-sm"><input type="checkbox" checked={Boolean(d?.youtube)} onChange={e => updateDestination(platform, {youtube: e.target.checked ? {title: (d?.caption || caption).split('\n')[0].slice(0,100) || 'Novo vídeo', description: (d?.caption || caption).split('\n').slice(1).join('\n'), privacyStatus:'private', madeForKids:false, containsSyntheticMedia:false} : undefined})} />Personalizar configurações do YouTube</label>
+                  {d?.youtube && <>
+                    <label className="block text-sm">Título do vídeo<input className="mt-1 w-full rounded bg-slate-900 p-2" maxLength={100} value={d.youtube.title} onChange={e => updateDestination(platform,{youtube:{...d.youtube!,title:e.target.value}})} /></label>
+                    <label className="block text-sm">Descrição do vídeo<textarea className="mt-1 w-full rounded bg-slate-900 p-2" maxLength={5000} value={d.youtube.description} onChange={e => updateDestination(platform,{youtube:{...d.youtube!,description:e.target.value}})} /></label>
+                    <label className="block text-sm">Visibilidade<select className="mt-1 w-full rounded bg-slate-900 p-2" value={d.youtube.privacyStatus} onChange={e => updateDestination(platform,{youtube:{...d.youtube!,privacyStatus:e.target.value as 'private' | 'unlisted' | 'public'}})}><option value="private">Privado</option><option value="unlisted">Não listado</option><option value="public">Público</option></select></label>
+                    <label className="flex gap-2 text-sm"><input type="checkbox" checked={d.youtube.madeForKids} onChange={e => updateDestination(platform,{youtube:{...d.youtube!,madeForKids:e.target.checked}})} />Este vídeo é destinado a crianças</label>
+                    <label className="flex gap-2 text-sm"><input type="checkbox" checked={d.youtube.containsSyntheticMedia} onChange={e => updateDestination(platform,{youtube:{...d.youtube!,containsSyntheticMedia:e.target.checked}})} />Contém conteúdo realista alterado ou sintético</label>
+                  </>}
+                </div>}
+                {!d?.youtube && <label className="block text-sm">{platform === 'youtube' ? 'Título na primeira linha e descrição abaixo' : 'Legenda específica (opcional)'}
+                  <textarea aria-label={`Texto ${platform}`} className="mt-1 w-full rounded bg-slate-900 p-2" maxLength={5000} value={d?.caption ?? ''} placeholder="Em branco, usa a legenda principal" onChange={e => updateDestination(platform,{caption:e.target.value})} />
+                </label>}
+              </section>;
+            })}
 
             <div>
               <div className="mb-2.5 flex items-center justify-between">
@@ -769,8 +883,8 @@ function PostModalContent({
                           key={value}
                           value={value}
                           disabled={
-                            !tiktokPublicPostingAllowed &&
-                            value !== 'SELF_ONLY'
+                            (!tiktokPublicPostingAllowed && value !== 'SELF_ONLY') ||
+                            (tiktokBrandContent && value === 'SELF_ONLY')
                           }
                         >
                           {TIKTOK_PRIVACY_LABELS[value]}
@@ -876,6 +990,7 @@ function PostModalContent({
                         <input
                           id="tiktok-brand-content"
                           type="checkbox"
+                          disabled={tiktokPrivacyLevel === 'SELF_ONLY'}
                           checked={tiktokBrandContent}
                           onChange={(event) =>
                             setTikTokBrandContent(event.target.checked)
@@ -884,6 +999,9 @@ function PostModalContent({
                         />
                         Marca de terceiros (conteúdo patrocinado)
                       </label>
+                      {tiktokPrivacyLevel === 'SELF_ONLY' && <p className="text-xs text-amber-200">Conteúdo patrocinado não pode ter visibilidade “Somente você”.</p>}
+                      {(tiktokBrandOrganic || tiktokBrandContent) && <p className="text-xs text-cyan-100">O vídeo será identificado como {tiktokBrandContent ? '“Parceria paga”' : '“Conteúdo promocional”'} no TikTok.</p>}
+                      {tiktokDisclosureMissing && <p role="status" className="text-xs text-amber-200">Indique se o conteúdo promove sua marca, terceiros ou ambos para poder agendar.</p>}
                     </div>
                   )}
                 </div>
@@ -896,13 +1014,13 @@ function PostModalContent({
                     id="tiktok-consent"
                     type="checkbox"
                     checked={tiktokConsent}
-                    onChange={(event) => setTikTokConsent(event.target.checked)}
+                    onChange={(event) => setTikTokConsent(event.target.checked ? tiktokConsentKey : false)}
                     className="mt-1 accent-cyan-300"
                   />
-                  Confirmo que tenho autorização para enviar este vídeo, que
+                  <span>Confirmo que tenho autorização para enviar este vídeo, que
                   possuo os direitos necessários sobre o conteúdo e a música e
                   que as informações comerciais acima são corretas. O TikTok
-                  pode publicar o vídeo em meu nome.
+                  pode publicar o vídeo em meu nome. Ao publicar, concordo com a <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer" className="underline">Confirmação de Uso de Música do TikTok</a>{tiktokBrandContent && <> e com a <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer" className="underline">Política de Conteúdo de Marca do TikTok</a></>}.</span>
                 </label>
               </section>
             )}
@@ -979,11 +1097,6 @@ function PostModalContent({
                             muted
                             playsInline
                             preload="metadata"
-                            onLoadedMetadata={(event) =>
-                              setVideoDurationSeconds(
-                                event.currentTarget.duration,
-                              )
-                            }
                           />
                         ) : (
                           <Image
@@ -1069,21 +1182,21 @@ function PostModalContent({
                       </p>
                     </div>
                   </div>
-                  {mediaUrls.length > 0 ? (
+                  {previewMediaUrls.length > 0 ? (
                     <div
                       className={`grid overflow-hidden bg-slate-100 ${
-                        mediaUrls.length === 1
+                        previewMediaUrls.length === 1
                           ? 'aspect-[4/5]'
                           : 'aspect-square grid-cols-2'
                       }`}
                     >
-                      {mediaUrls.slice(0, 4).map((url, index) => {
+                      {previewMediaUrls.slice(0, 4).map((url, index) => {
                         const isVideo = isVideoMediaUrl(url);
                         return (
                           <div
                             key={`${url}-${index}`}
                             className={`relative min-h-0 min-w-0 overflow-hidden ${
-                              mediaUrls.length === 1 ? '' : 'aspect-square'
+                              previewMediaUrls.length === 1 ? '' : 'aspect-square'
                             }`}
                           >
                             {isVideo ? (
@@ -1104,9 +1217,9 @@ function PostModalContent({
                                 className="object-cover"
                               />
                             )}
-                            {index === 3 && mediaUrls.length > 4 && (
+                            {index === 3 && previewMediaUrls.length > 4 && (
                               <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg font-semibold text-white">
-                                +{mediaUrls.length - 4}
+                                +{previewMediaUrls.length - 4}
                               </span>
                             )}
                           </div>
@@ -1120,14 +1233,14 @@ function PostModalContent({
                   )}
                   <div className="space-y-1.5 px-3 py-3">
                     <p className="whitespace-pre-wrap break-words text-xs leading-5">
-                      {caption || 'A legenda aparecerá aqui'}
+                      {destinations.find(d => d.platform === previewPlatform)?.format === 'story' ? 'Story: texto incorporado na mídia' : previewPlatform === 'youtube' && destinations.find(d => d.platform === 'youtube')?.youtube ? `${destinations.find(d => d.platform === 'youtube')!.youtube!.title}\n${destinations.find(d => d.platform === 'youtube')!.youtube!.description}` : destinations.find(d => d.platform === previewPlatform)?.caption || caption || 'A legenda aparecerá aqui'}
                     </p>
                     <p className="text-[10px] text-slate-400">
-                      {mediaUrls.length}{' '}
-                      {mediaUrls.length === 1 ? 'mídia' : 'mídias'}
+                      {previewMediaUrls.length}{' '}
+                      {previewMediaUrls.length === 1 ? 'mídia' : 'mídias'}
                       {scheduledDate &&
                         time &&
-                        ` · ${scheduledDate} às ${time}`}
+                        ` · ${previewDateTime.date} às ${previewDateTime.time}`}
                     </p>
                   </div>
                 </div>
@@ -1141,8 +1254,7 @@ function PostModalContent({
                   )}
                 {previewPlatform !== 'instagram' && (
                   <p className="mt-3 rounded-lg border border-indigo-300/15 bg-indigo-300/[0.04] p-2.5 text-[11px] leading-5 text-indigo-100/75">
-                    Prévia para planejamento. A publicação direta desta rede
-                    será implementada na etapa final de integrações.
+                    Prévia para planejamento. O envio depende da conexão da conta e das permissões da rede. O processamento pode levar alguns minutos.
                   </p>
                 )}
               </div>
@@ -1272,6 +1384,7 @@ function PostModalContent({
               </button>
               {!lockedPost && (
                 <>
+                  <button type="button" disabled={isBusy || isUploading || tiktokDisclosureMissing} onClick={() => void handleSave(false, true)} className="rounded-lg border border-indigo-400/30 px-3 py-2 text-sm text-indigo-200">Publicar agora</button>
                   <button
                     type="button"
                     onClick={() => void handleSave(true)}
@@ -1288,7 +1401,7 @@ function PostModalContent({
                   <button
                     type="button"
                     onClick={() => void handleSave(false)}
-                    disabled={isBusy || isUploading}
+                    disabled={isBusy || isUploading || tiktokDisclosureMissing}
                     className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-indigo-500 px-4 text-xs font-semibold text-white shadow-lg shadow-indigo-950/30 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {pendingAction === 'schedule' ? (
@@ -1308,6 +1421,6 @@ function PostModalContent({
           </div>
         </div>
       </section>
-    </div>
+    </dialog>
   );
 }

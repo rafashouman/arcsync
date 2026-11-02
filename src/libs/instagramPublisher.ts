@@ -157,8 +157,8 @@ function getMediaUrls(post: ClaimedPost) {
   });
 }
 
-async function getValidAccessToken(workspaceId: string) {
-  const account = await getDefaultInstagramAccountForWorkspace(workspaceId);
+async function getValidAccessToken(workspaceId: string, accountId?: string) {
+  const account = await getDefaultInstagramAccountForWorkspace(workspaceId, accountId);
   if (!account) {
     throw new InstagramPublishError('Nenhuma conta padrão do Instagram está conectada.');
   }
@@ -249,6 +249,7 @@ async function createMediaContainer(
   accessToken: string,
   caption?: string,
   carouselItem = false,
+  story = false,
 ) {
   const fields: Record<string, string> = {};
   if (media.type === 'image') {
@@ -260,7 +261,8 @@ async function createMediaContainer(
     if (!carouselItem) fields.share_to_feed = 'true';
   }
   if (carouselItem) fields.is_carousel_item = 'true';
-  if (caption) fields.caption = caption;
+  if (story) { fields.media_type = 'STORIES'; delete fields.share_to_feed; }
+  if (caption && !story) fields.caption = caption;
 
   const response = await graphRequest(`${accountId}/media`, accessToken, fields);
   if (typeof response.id !== 'string' || !response.id) {
@@ -298,6 +300,8 @@ async function prepareContainer(
           media[0],
           accessToken,
           post.caption,
+          false,
+          post.destinations?.find(d => d.platform === 'instagram')?.format === 'story',
         ),
       ];
     }
@@ -360,7 +364,7 @@ export async function publishClaimedInstagramPost(post: ClaimedPost) {
       return 'uncertain' as const;
     }
 
-    const { accessToken, instagramAccountId } = await getValidAccessToken(post.workspaceId);
+    const { accessToken, instagramAccountId } = await getValidAccessToken(post.workspaceId, post.destinations?.find(d => d.platform === 'instagram')?.accountId);
     const containerId = await prepareContainer(
       post,
       instagramAccountId,

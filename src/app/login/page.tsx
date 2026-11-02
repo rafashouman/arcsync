@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Suspense } from 'react';
 import AuthForm from '@/src/components/AuthForm';
+import BrandLogo from '@/src/components/BrandLogo';
 
 export const metadata: Metadata = {
   title: 'Entrar | FeedSync',
@@ -31,14 +33,10 @@ async function LoginContent({
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-7 flex items-center justify-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-violet-600 font-bold text-white shadow-lg shadow-indigo-950/50">
-            F
-          </div>
-          <span className="text-lg font-semibold tracking-tight text-white">
-            Feed<span className="text-indigo-300">Sync</span>
-          </span>
+          <Link href="/" aria-label="FeedSync — início"><BrandLogo large /></Link>
         </div>
         <AuthForm redirectTo={redirectTo} />
+        <nav className="mt-5 flex flex-wrap justify-center gap-4 text-xs text-slate-400" aria-label="Informações públicas"><Link href="/about">Sobre</Link><Link href="/privacy">Privacidade</Link><Link href="/terms">Termos</Link><Link href="/support">Suporte</Link></nav>
         <p className="mt-5 text-center text-[11px] leading-5 text-slate-600">
           Suas publicações e arquivos são privados e vinculados à sua conta.
         </p>

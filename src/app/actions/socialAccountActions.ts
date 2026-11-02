@@ -61,7 +61,7 @@ export async function disconnectSocialAccount(
       try {
         if (platform === 'tiktok') {
           await revokeTikTokToken(getTikTokOAuthConfig(), secrets.accessToken);
-        } else {
+        } else if (platform === 'youtube') {
           await revokeYouTubeToken(secrets.accessToken);
         }
       } catch (error) {
@@ -128,6 +128,7 @@ export async function refreshSocialAccount(
       redirect(getStatus(platform, 'refresh-error'));
     }
 
+    if (platform === 'facebook') redirect(getStatus(platform, 'refresh-error'));
     const tokens =
       platform === 'tiktok'
         ? await refreshTikTokTokens(
@@ -156,7 +157,7 @@ export async function refreshSocialAccount(
   }
 }
 
-export async function getTikTokCreatorInfoForPost() {
+export async function getTikTokCreatorInfoForPost(accountId?: string) {
   const user = await getCurrentUser();
   if (!user) {
     return {
@@ -173,7 +174,7 @@ export async function getTikTokCreatorInfoForPost() {
         error: 'Seu papel não permite criar publicações.',
       };
     }
-    const accessToken = await getValidSocialAccessToken(workspace.workspaceId, 'tiktok');
+    const accessToken = await getValidSocialAccessToken(workspace.workspaceId, 'tiktok', accountId);
     const creatorInfo = await queryTikTokCreatorInfo(accessToken);
     return {
       success: true as const,

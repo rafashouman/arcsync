@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, models } from 'mongoose';
 export interface IAccount extends Document {
   userId: string;
   workspaceId?: string;
-  platform: 'instagram' | 'tiktok' | 'youtube';
+  platform: 'instagram' | 'tiktok' | 'youtube' | 'facebook';
   platformAccountId: string;
   accountName: string;
   encryptedAccessToken: string;

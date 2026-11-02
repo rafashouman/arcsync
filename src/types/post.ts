@@ -1,4 +1,4 @@
-export const SOCIAL_PLATFORMS = ['instagram', 'tiktok', 'youtube'] as const;
+export const SOCIAL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'facebook'] as const;
 
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
 export type TikTokPrivacyLevel =
@@ -28,13 +28,37 @@ export type PlatformPublishState =
   | 'failed';
 
 export interface PlatformStatus {
+  externalId?: string;
   platform: SocialPlatform;
   state: PlatformPublishState;
   error?: string;
   mayHaveSucceeded?: boolean;
 }
 
+export interface PostDestination {
+  youtube?: YouTubeOptions;
+  scheduledFor?: string;
+  mediaUrls?: string[];
+  platform: SocialPlatform;
+  accountId: string;
+  format: 'feed' | 'carousel' | 'reel' | 'story' | 'video';
+  caption?: string;
+}
+
+export interface YouTubeOptions {
+  title: string;
+  description: string;
+  privacyStatus: 'private' | 'unlisted' | 'public';
+  madeForKids: boolean;
+  containsSyntheticMedia: boolean;
+}
+
+export interface PostHistoryEntry { at: string; event: string; runId?: string; states?: { platform: string; state: string }[]; }
+
 export interface PostRecord {
+  deletedAt?: string;
+  history?: PostHistoryEntry[];
+  destinations?: PostDestination[];
   _id: string;
   workspaceId?: string;
   createdBy?: string;
@@ -62,6 +86,7 @@ export interface PostRecord {
 }
 
 export interface SchedulePostInput {
+  destinations?: PostDestination[];
   caption: string;
   platforms: SocialPlatform[];
   scheduledFor: string | null;

@@ -8,29 +8,38 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test",
-    "check:env": "tsx scripts/check-env.ts"
+    "test:integration": "node --import tsx --import ./tests/server-only-register.mjs scripts/integration.mts",
+    "test:providers": "node --import tsx --import ./tests/server-only-register.mjs scripts/provider-integration.mts",
+    "check:env": "tsx scripts/check-env.ts",
+    "audit:production": "npm audit --omit=dev",
+    "test:operations": "node --import tsx --import ./tests/server-only-register.mjs scripts/operations-integration.mts",
+    "test:backup": "node scripts/backup-integration.mjs",
+    "retention:report": "tsx scripts/retention-report.mts",
+    "test:retention": "tsx scripts/retention-integration.mts"
   },
   "dependencies": {
     "lucide-react": "^1.64.0",
     "mongodb": "^7.7.0",
     "mongoose": "^9.11.4",
-    "next": "16.4.3",
+    "next": "16.4.4",
     "nodemailer": "^10.3.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
-    "@tailwindcss/turbopack": "^4",
-    "@types/mongoose": "^5.11.96",
-    "@types/node": "^20",
+    "@tailwindcss/turbopack": "^4.3.4",
+    "@types/node": "^24.19.2",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.4.3",
-    "tailwindcss": "^4",
+    "eslint-config-next": "16.4.4",
+    "tailwindcss": "^4.3.4",
     "tsx": "^4.23.15",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=24 <25"
   }
 }

@@ -2,166 +2,40 @@ import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import {
-  BarChart3,
-  CalendarPlus,
-  FileText,
-  Users,
-  ClipboardCheck,
-} from 'lucide-react';
-import SchedulingCalendar from '@/src/components/Calendar';
-import CreatePostModal from '@/src/components/CreatePostModal';
-import SignOutButton from '@/src/components/SignOutButton';
-import { InstagramIcon } from '@/src/components/icons/SocialIcons';
+import { ArrowUpRight, CalendarDays, FileText, Radio, Users, BarChart3 } from 'lucide-react';
 import { getCurrentUser } from '@/src/libs/authSession';
-import { listPostsForWorkspace } from '@/src/data/posts';
 import { getWorkspaceContext } from '@/src/data/workspaces';
-import {
-  canCreateWorkspacePosts,
-  canReviewWorkspacePosts,
-} from '@/src/libs/workspacePermissions';
+import { listPostsForWorkspace } from '@/src/data/posts';
+import SignOutButton from '@/src/components/SignOutButton';
+import BrandLogo from '@/src/components/BrandLogo';
 
-const workspaceRoleLabels = {
-  owner: 'proprietário',
-  admin: 'administrador',
-  editor: 'editor',
-  approver: 'aprovador',
-} as const;
-
-async function ScheduledContent() {
+async function Dashboard() {
   await connection();
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-
   const workspace = await getWorkspaceContext(user.uid, user.email);
   const posts = await listPostsForWorkspace(workspace.workspaceId);
-  const canCreatePosts = canCreateWorkspacePosts(workspace.role);
-  const isMongoConfigured = Boolean(process.env.MONGODB_URI);
-
-  return (
-    <>
-      <header className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-violet-600 text-lg font-bold text-white shadow-lg shadow-indigo-950/50">
-            F
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-white">
-              Feed<span className="text-indigo-300">Sync</span>
-            </h1>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {workspace.workspaceName} · {workspaceRoleLabels[workspace.role]}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1.5 text-slate-300">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${isMongoConfigured ? 'bg-emerald-400' : 'bg-amber-400'
-                }`}
-            />
-            {isMongoConfigured ? 'Dados persistentes' : 'Modo demonstração'}
-          </span>
-          <span className="rounded-full border border-indigo-400/15 bg-indigo-400/[0.06] px-3 py-1.5 text-indigo-200">
-            {posts.length} {posts.length === 1 ? 'post' : 'posts'}
-          </span>
-          <Link
-            href="/analytics"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-slate-300 transition hover:border-violet-400/25 hover:bg-white/[0.04] hover:text-violet-100"
-          >
-            <BarChart3 size={14} />
-            Analytics
-          </Link>
-          <Link
-            href="/settings/accounts"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-slate-300 transition hover:border-pink-400/25 hover:bg-white/[0.04] hover:text-pink-100"
-          >
-            <InstagramIcon size={14} />
-            Contas sociais
-          </Link>
-          <Link
-            href="/settings/team"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-slate-300 transition hover:border-indigo-400/25 hover:bg-white/[0.04] hover:text-indigo-100"
-          >
-            <Users size={14} />
-            Equipe
-          </Link>
-          {canReviewWorkspacePosts(workspace.role) && (
-            <Link
-              href="/approvals"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-slate-300 transition hover:border-emerald-400/25 hover:bg-white/[0.04] hover:text-emerald-100"
-            >
-              <ClipboardCheck size={14} />
-              Aprovações
-            </Link>
-          )}
-          <SignOutButton email={user.email} />
-        </div>
-      </header>
-
-      {posts.length === 0 && canCreatePosts && (
-        <section
-          aria-labelledby="getting-started-title"
-          className="mt-6 overflow-hidden rounded-2xl border border-indigo-400/15 bg-gradient-to-br from-indigo-400/[0.08] via-[#11151f] to-violet-500/[0.04] p-5 sm:p-7"
-        >
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-200/75">
-                Primeiros passos
-              </p>
-              <h2
-                id="getting-started-title"
-                className="mt-2 text-xl font-semibold text-white"
-              >
-                Seu calendário começa com uma ideia
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Crie um post, salve como rascunho ou escolha data e horário para
-                organizar sua publicação. Instagram e YouTube podem ser
-                publicados após conectar uma conta. O TikTok também pode ser
-                agendado após conectar a conta e escolher as opções exigidas.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-3 text-xs text-slate-300">
-                <span className="inline-flex items-center gap-2">
-                  <CalendarPlus size={15} className="text-indigo-300" />
-                  Agende pelo calendário
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <FileText size={15} className="text-slate-300" />
-                  Guarde ideias como rascunho
-                </span>
-              </div>
-            </div>
-            <Link
-              href="#calendar"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-500 px-4 text-xs font-semibold text-white shadow-lg shadow-indigo-950/30 transition hover:bg-indigo-400"
-            >
-              <CalendarPlus size={15} />
-              Criar primeiro post
-            </Link>
-          </div>
-        </section>
-      )}
-      <SchedulingCalendar posts={posts} canCreatePosts={canCreatePosts} />
-      {canCreatePosts && <CreatePostModal />}
-    </>
-  );
+  const counts = [
+    { label: 'Agendados', value: posts.filter(p => p.status === 'pending').length },
+    { label: 'Rascunhos', value: posts.filter(p => p.status === 'draft').length },
+    { label: 'Publicados', value: posts.filter(p => p.status === 'published').length },
+    { label: 'Precisam de atenção', value: posts.filter(p => p.status === 'failed' || p.publishMayHaveSucceeded).length },
+  ];
+  return <div className="dashboard">
+    <header className="dashboard-header"><Link href="/" className="brand" aria-label="FeedSync — início"><BrandLogo /></Link><div className="flex flex-wrap items-center gap-4"><span className="dashboard-muted text-sm">{workspace.workspaceName}</span><SignOutButton email={user.email}/></div></header>
+    <nav className="dashboard-nav" aria-label="Navegação principal"><Link href="/" aria-current="page">Início</Link><Link href="/calendar">Calendário</Link><Link href="/monitoring">Monitoramento</Link><Link href="/settings/accounts">Contas sociais</Link></nav>
+    <section className="dashboard-hero"><div><p className="dashboard-eyebrow">SEU ESPAÇO DE CRIAÇÃO</p><h1>Boas ideias merecem<br/>ganhar o mundo.</h1><p className="dashboard-muted mt-5 max-w-lg leading-7">Organize seus conteúdos, acompanhe as publicações e planeje os próximos passos da sua presença nas redes.</p><Link className="dashboard-primary mt-7" href="/calendar">Planejar publicações <ArrowUpRight size={18}/></Link></div><div className="hero-art" aria-hidden="true"><div className="hero-card"><CalendarDays size={42}/><span>Uma ideia.<br/>Muitas possibilidades.</span><div className="hero-dots"><i/><i/><i/><i/></div></div><span className="hero-label">CRIE · PLANEJE · PUBLIQUE</span></div></section>
+    <section className="dashboard-stats" aria-label="Resumo das publicações">{counts.map(item => <div className="dashboard-panel" key={item.label}><span className="dashboard-muted text-sm">{item.label}</span><p className="mt-3 text-3xl font-semibold">{item.value}</p></div>)}</section>
+    <div className="dashboard-columns"><section className="dashboard-panel"><h2 className="text-lg font-semibold">Seu planejamento começa aqui</h2><p className="dashboard-muted mt-3 leading-7">Reserve um momento para suas próximas ideias. No calendário, você pode criar rascunhos e definir a publicação em cada rede.</p><Link href="/calendar" className="dashboard-link mt-6">Abrir calendário <ArrowUpRight size={16}/></Link></section>
+    <section className="dashboard-panel"><h2 className="text-lg font-semibold">Tudo no seu lugar</h2><div className="mt-4">{[
+      {href:'/settings/accounts',icon:Radio,title:'Contas sociais',text:'Conecte e gerencie suas redes'},
+      {href:'/analytics',icon:BarChart3,title:'Analytics',text:'Explore os dados disponíveis'},
+      {href:'/settings/team',icon:Users,title:'Sua equipe',text:'Organize a colaboração'},
+      {href:'/approvals',icon:FileText,title:'Aprovações',text:'Acompanhe as revisões'},
+    ].map(item => <Link className="dashboard-recent" href={item.href} key={item.href}><span className="dashboard-icon"><item.icon size={19}/></span><span className="flex-1"><span className="block text-sm font-medium">{item.title}</span><span className="dashboard-muted text-xs">{item.text}</span></span><ArrowUpRight size={16}/></Link>)}</div></section></div>
+    <footer className="dashboard-muted py-8 text-xs">FeedSync · Mais espaço para criar.</footer>
+  </div>;
 }
-
 export default function Home() {
-  return (
-    <main className="min-h-screen px-4 py-6 text-slate-200 selection:bg-indigo-500/30 sm:px-7 sm:py-9">
-      <div className="mx-auto max-w-[1440px]">
-        <Suspense
-          fallback={
-            <div className="flex min-h-[65vh] items-center justify-center text-sm text-slate-500">
-              Carregando seu calendário...
-            </div>
-          }
-        >
-          <ScheduledContent />
-        </Suspense>
-      </div>
-    </main>
-  );
+  return <main><Suspense fallback={<p className="p-8">Carregando seu espaço…</p>}><Dashboard/></Suspense></main>;
 }

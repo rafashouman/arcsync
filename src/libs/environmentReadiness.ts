@@ -17,6 +17,10 @@ interface OAuthProviderConfiguration {
 
 const oauthProviders: OAuthProviderConfiguration[] = [
   {
+    prefix: 'Facebook', requiredKeys: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
+    redirectKey: 'FACEBOOK_REDIRECT_URI', redirectPath: '/api/social/facebook/callback', allowLocalHttp: true,
+  },
+  {
     prefix: 'Instagram',
     requiredKeys: ['INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET'],
     redirectKey: 'INSTAGRAM_REDIRECT_URI',
@@ -203,6 +207,7 @@ export function checkEnvironmentReadiness(
   }
 
   if (production) {
+    if (!env.LEGAL_OPERATOR_NAME?.trim() || !env.SUPPORT_EMAIL?.trim() || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(env.SUPPORT_EMAIL)) checks.push({level:'warning',key:'PUBLIC_INFORMATION',message:'Preencha LEGAL_OPERATOR_NAME e SUPPORT_EMAIL e revise os textos públicos antes de liberar o produto.'});
     const uploadsDirectory = env.FEEDSYNC_UPLOADS_DIR?.trim();
     if (uploadsDirectory && !path.isAbsolute(uploadsDirectory)) {
       checks.push({

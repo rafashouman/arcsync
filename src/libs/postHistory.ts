@@ -1,0 +1,2 @@
+const labels: Record<string,string> = {created:'Criado',edited:'Editado',claimed:'Processamento iniciado',progress:'Progresso de envio',waiting:'Aguardando próxima etapa',retry_scheduled:'Nova tentativa programada',manual_retry:'Nova tentativa solicitada',platform_result:'Resultado da publicação',failed:'Falha',uncertain:'Resultado incerto',approved:'Aprovado',rejected:'Rejeitado',rescheduled:'Reagendado',deleted:'Excluído da agenda'};
+export function historyEventLabel(event:string) {return labels[event] ?? event;}

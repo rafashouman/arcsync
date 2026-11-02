@@ -194,12 +194,12 @@ export async function setDefaultInstagramAccountForWorkspace(
   return result.modifiedCount === 1;
 }
 
-export async function getDefaultInstagramAccountForWorkspace(workspaceId: string) {
+export async function getDefaultInstagramAccountForWorkspace(workspaceId: string, accountId?: string) {
   await getAccountDatabase();
   const account = await Account.findOne({
     ...workspaceAccountFilter(workspaceId),
     platform: 'instagram',
-    isDefault: true,
+    ...(accountId ? { _id: accountId } : { isDefault: true }),
     encryptedAccessToken: { $exists: true },
     expiresAt: { $type: 'date' },
   })
