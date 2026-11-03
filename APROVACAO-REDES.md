@@ -1,5 +1,7 @@
 # Dossiê de configuração e revisão das redes
 
+> Estado consolidado em 03/11/2026: consultar `PENDENCIAS-FINAIS-MVP.md` para o trabalho restante e `GUIA-CONFIGURACAO-REDES.md` para instalação/configuração revisada. Home em `/`, calendário em `/calendar`, temas e logos oficiais concluídos. Registros de testes abaixo são históricos; não comprovam homologação externa.
+
 Preparado em 02/11/2026. Status: material preparado; nenhum cadastro, consentimento, envio de formulário ou aprovação externa realizado.
 
 ## Identidade informada

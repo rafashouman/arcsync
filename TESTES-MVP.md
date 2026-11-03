@@ -1,5 +1,7 @@
 # Preparação e homologação do MVP
 
+> Estado consolidado em 03/11/2026: consultar `PENDENCIAS-FINAIS-MVP.md` para o trabalho restante e `GUIA-CONFIGURACAO-REDES.md` para instalação/configuração revisada. Home em `/`, calendário em `/calendar`, temas e logos oficiais concluídos. Registros de testes abaixo são históricos; não comprovam homologação externa.
+
 ## Implementado nesta etapa
 - Conta de destino persistida e consultada no envio; troca de padrão não redireciona posts.
 - Validação de pertencimento da conta ao workspace ao salvar.

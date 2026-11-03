@@ -1,6 +1,6 @@
 # FeedSync — tutorial de configuração das redes sociais
 
-Referência: 2 de novembro de 2026. Este guia prepara a configuração; não altera credenciais nem publica conteúdo. Nomes dos menus podem mudar. Requisitos devem ser confirmados no painel do aplicativo antes de submetê-lo.
+Revisão: 3 de novembro de 2026. Este guia prepara a configuração; não altera credenciais nem publica conteúdo. Nomes dos menus podem mudar. Requisitos devem ser confirmados no painel do aplicativo antes de submetê-lo.
 
 ## 1. O que você precisa reunir
 
@@ -29,6 +29,13 @@ MEDIA_URL_SIGNING_KEY=<outra-chave-base64-de-32-bytes>
 CRON_SECRET=<segredo-aleatorio-com-pelo-menos-32-caracteres>
 LEGAL_OPERATOR_NAME=NexuSync
 SUPPORT_EMAIL=contato@nexusync.online
+PUBLISHING_ENABLED=false
+OPERATIONS_ALERT_WEBHOOK=
+SMTP_HOST=<servidor-smtp>
+SMTP_PORT=587
+SMTP_USER=<usuario-smtp>
+SMTP_PASSWORD=<senha-smtp>
+SMTP_FROM=<remetente-autorizado>
 ```
 
 `/app/uploads` é o caminho dentro do container: monte um volume persistente nele. Em execução direta na VPS, use o caminho absoluto real do servidor. Não basta apontar para uma pasta temporária.
@@ -45,9 +52,9 @@ Para o segredo do cron:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Guarde os valores no gerenciador de segredos/ambiente do servidor. Não cole secrets no chat, no código, em capturas de tela ou no Git. Preserve a chave de criptografia: trocá-la sem migração impede ler os tokens existentes. Reinicie o serviço após alterar a configuração.
+Guarde os valores no gerenciador de segredos/ambiente do servidor. Não cole secrets no chat, no código, em capturas de tela ou no Git. Preserve a chave de criptografia: trocá-la sem migração impede ler os tokens existentes. Em Docker Compose, recrie os containers após alterar variáveis: apenas `restart` não recarrega o arquivo de ambiente. Use `up -d --force-recreate` para os serviços afetados. Em execução direta, reinicie o processo com o ambiente atualizado.
 
-Configure um agendador do servidor para chamar, a cada minuto:
+Escolha o agendador do perfil `operations` do Compose (seção 10) ou um cron externo. Não é necessário usar ambos. Para cron externo, configure a chamada a cada minuto:
 
 - Método: `POST`
 - URL: `https://app.seu-dominio.com/api/cron/publish`
@@ -163,7 +170,7 @@ FACEBOOK_GRAPH_API_VERSION=v26.0
 2. Aplicar configuração no ambiente HTTPS de homologação e reiniciar o serviço.
 3. Conectar uma conta por rede via OAuth; não copiar tokens temporários de exploradores de API para o banco.
 4. Salvar rascunho e conferir conta, formato, texto, mídia, horário e fuso por destino.
-5. Fazer primeiro envio individual, depois multiplataforma.
+5. Revisar todos os agendamentos vencidos; liberar `PUBLISHING_ENABLED=true` no app e agendador e recriar os serviços. Fazer primeiro envio individual, depois multiplataforma.
 6. Conferir o conteúdo no aplicativo da rede e registrar ID/link/horário real.
 7. Verificar histórico, retentativa parcial, reconexão e cron sem o navegador aberto.
 8. Só liberar para clientes depois dos testes e aprovações aplicáveis.
@@ -173,7 +180,7 @@ FACEBOOK_GRAPH_API_VERSION=v26.0
 | Sintoma | Primeira checagem |
 |---|---|
 | Redirect URI inválida | Comparar protocolo, domínio e caminho completos no painel e variável |
-| Conta conectada, sem publicar | Conta do destino, permissões, formato e cron |
+| Conta conectada, sem publicar | `PUBLISHING_ENABLED=true`, conta do destino, permissões, formato e cron |
 | Mídia não processada no Instagram | JPG/codec, URL HTTPS assinada acessível e expiração |
 | YouTube desconecta após uma semana | Status Testing da configuração OAuth |
 | TikTok só permite privado | Auditoria, privacidade da conta e opções do criador |
@@ -194,3 +201,54 @@ Material de cadastro e roteiros de revisão: `APROVACAO-REDES.md`. Nome/contato 
 A fila agora exige `PUBLISHING_ENABLED=true` no ambiente do app e do agendador. Manter `false` durante preparação/restauração. Mesmo com OAuth configurado, nenhuma publicação automática será iniciada enquanto essa liberação não ocorrer.
 
 O perfil Compose `operations` fornece agendador e monitor; não manter um segundo cron concorrente sem necessidade. Instalação, alertas, backup e recuperação estão em `OPERACAO-MVP.md`. Configurar e ensaiar essas rotinas no host de homologação antes de liberar contas reais. Credenciais, HTTPS e submissões continuam reservados à etapa final.
+
+
+## 11. Instalação Docker — parâmetros que faltavam no roteiro
+
+No host Linux, usar Node 24 para ferramentas locais e Docker Compose para os serviços. O arquivo `compose.production.yaml` não cria o banco nem o proxy HTTPS: ambos devem ser provisionados separadamente.
+
+Preparar um `.env` de interpolação do Compose, separado do arquivo de segredos da aplicação:
+
+```dotenv
+FEEDSYNC_IMAGE_TAG=homologacao
+FEEDSYNC_ENV_FILE=/etc/feedsync/homologacao.env
+FEEDSYNC_UPLOADS_HOST_DIR=/var/lib/feedsync/uploads
+FEEDSYNC_PORT=3000
+FEEDSYNC_UID=1000
+FEEDSYNC_GID=1000
+```
+
+Os caminhos e a etiqueta são exemplos. Criar o diretório persistente com permissão de escrita para o UID/GID escolhido. Proteger o arquivo de segredos. `MONGODB_URI` precisa ser alcançável de dentro do container: `localhost` aponta para o próprio container, não para o banco do host. Configurar rede/autenticação do banco sem expor a porta publicamente.
+
+Na etapa final, a partir da raiz do projeto e com esses arquivos preparados:
+
+```sh
+docker compose -f compose.production.yaml config --quiet
+docker compose -f compose.production.yaml build app env-check
+docker compose -f compose.production.yaml run --rm env-check
+docker compose -f compose.production.yaml up -d app
+```
+
+O validador está na imagem `env-check` (estágio builder); a imagem enxuta do app não inclui todas as ferramentas de desenvolvimento. Não executar `check:env` diretamente no runner esperando a mesma estrutura do repositório. O validador exige SMTP e não testa permissões efetivas das redes.
+
+A porta web é publicada somente em `127.0.0.1` do host. Configurar proxy reverso e certificado HTTPS, preservando Host e protocolo encaminhado. Ajustar limite de corpo/tempo de upload para suportar os 95 MB aceitos pelo app e a sobrecarga do formulário. Validar também entrega e expiração de mídias assinadas.
+
+SMTP: preencher as cinco variáveis da seção 2 com dados reais do provedor. O código usa TLS direto na porta 465; para 587, usa o transporte SMTP com negociação de TLS conforme o servidor. Confirmar remetente autorizado e autenticação do domínio com o provedor. Testar recuperação de senha e recebimento na etapa final.
+
+Depois de validar contas, revisar a fila e liberar os testes reais, definir `PUBLISHING_ENABLED=true` no arquivo da aplicação e executar:
+
+```sh
+docker compose -f compose.production.yaml --profile operations up -d --force-recreate app scheduler monitor
+```
+
+A fila pode executar imediatamente. Não fazer essa liberação com posts vencidos ainda não revisados. Alertas e backups seguem `OPERACAO-MVP.md`; backups exigem chave própria, distinta das chaves dos tokens e URLs. Nenhum desses comandos foi executado contra um servidor nesta revisão.
+
+## 12. Conferência das fontes em 03/11/2026
+
+- Google: conferidas [referência de upload](https://developers.google.com/youtube/data/reference/rest/v3/videos/insert) e [OAuth](https://developers.google.com/identity/protocols/oauth2). Mantidos os dois escopos do código e envio privado por padrão do FeedSync; isso é diferente do padrão da API.
+- TikTok: conferidas [diretrizes de compartilhamento](https://developers.tiktok.com/docs/en/content-sharing-guidelines) e [transferência de mídia](https://developers.tiktok.com/docs/en/content-posting-api-media-transfer-guide). Mantidas auditoria, restrições não auditadas e verificação de propriedade para PULL_FROM_URL.
+- Meta: referências de Instagram Login e Facebook Pages retornaram HTTP 429. Callbacks, escopos e versão v26.0 foram comparados com o código; disponibilidade, acessos e elegibilidade devem ser confirmados no painel. Não considerar essa parte uma validação externa concluída.
+
+## 13. Navegação e marca para a revisão
+
+A home autenticada está em `/`; o calendário está em `/calendar`. Para apresentação pública e revisores sem sessão, usar `/about`, além das páginas legais. Logos oficiais e modos claro/escuro já estão integrados; os arquivos com sufixo `-dark` têm texto escuro e são usados no tema claro. A preferência de tema é local ao navegador. Não muda callbacks ou configurações das redes.

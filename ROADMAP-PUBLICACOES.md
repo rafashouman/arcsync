@@ -1,5 +1,7 @@
 # FeedSync — roadmap para publicações reais
 
+> Estado consolidado em 03/11/2026: consultar `PENDENCIAS-FINAIS-MVP.md` para o trabalho restante e `GUIA-CONFIGURACAO-REDES.md` para instalação/configuração revisada. Home em `/`, calendário em `/calendar`, temas e logos oficiais concluídos. Registros de testes abaixo são históricos; não comprovam homologação externa.
+
 Referência: 2 de novembro de 2026. Estado verificado no código local; contas e ambientes externos não foram auditados nesta etapa.
 
 ## Preparação técnica realizada

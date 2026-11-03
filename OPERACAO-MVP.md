@@ -21,7 +21,7 @@ Não ativar outro cron em paralelo sem necessidade. Definir `PUBLISHING_ENABLED=
 | `/monitoring` | Usuário autenticado vê estado do agendador e alertas de sua equipe |
 | Execução não registrada há 5 minutos | Estado `stale` |
 | Execução iniciada há mais de 2 minutos sem conclusão | Estado `stuck` |
-| Configuração incompleta ou envio desativado | Estado `blocked` |
+| Chamada autenticada à fila com configuração incompleta ou envio desativado | Estado `blocked` |
 | Falhas em destinos durante um ciclo | Estado `degraded`; cron responde HTTP 207 |
 
 O diário técnico guarda datas, resultado e contagem, sem conteúdo de posts/tokens, com expiração de sete dias. Esse diário técnico é diferente do histórico de publicações proposto para 180 dias.
@@ -70,3 +70,12 @@ Comandos: `npm test`, `npm run test:operations`, `npm run test:backup`, `npm run
 ## Revisão de retenção sem alterar dados
 
 `npm run retention:report -- --workspace ID_EXATO_DA_EQUIPE` gera uma prévia JSON somente de leitura. `--backup-dir` acrescenta inspeção da pasta de backups do operador (não restrita à equipe). Configuração, critérios conservadores e limites estão em `POLITICA-RETENCAO-PROPOSTA.md`. O relatório não verifica referências de mídia nem autoriza exclusão. `npm run test:retention` valida isolamento e preservação usando dados fictícios em `feedsync_mvp_retention`, na porta local 27119.
+
+
+## Ajustes da revisão de 03/11/2026
+
+Os parâmetros de interpolação do Compose, permissões de volume, banco e SMTP estão nas seções 2 e 11 de `GUIA-CONFIGURACAO-REDES.md`. Recriar containers para recarregar variáveis; `restart` sozinho não basta. O perfil operacional só deve ser liberado após revisar agendamentos vencidos.
+
+Quando `PUBLISHING_ENABLED=false`, o serviço scheduler não chama a rota: o monitor pode mostrar `missing` (sem execução) ou `stale` (registro antigo). `blocked` é registrado quando a rota autenticada é efetivamente chamada e recusa a execução. Isso evita interpretar a preparação desativada como prova de que a fila está operando.
+
+Home e calendário são páginas diferentes: `/` e `/calendar`. Os endpoints de saúde e cron continuam iguais. O diário técnico de sete dias permanece distinto da proposta 180/30 e dos relatórios de retenção, que não apagam conteúdos.
