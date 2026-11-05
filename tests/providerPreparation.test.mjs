@@ -1,11 +1,24 @@
+import './server-only-register.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { youtubeMetadata, validateYouTubeOptions } from '../src/libs/youtubeMetadata.ts';
 import { initializeTikTokVideoFromUrl } from '../src/libs/tiktokPublishingApi.ts';
 import { publishFacebookPagePost } from '../src/libs/facebookPublishingApi.ts';
 import { validatePostInput } from '../src/libs/postValidation.ts';
+import { TikTokPostingQuota } from '../src/models/TikTokPostingQuota.ts';
+import {
+  createInstagramAuthorizationUrl,
+  exchangeInstagramAuthorizationCodeForAccounts,
+} from '../src/libs/instagramOAuth.ts';
 
 const youtube = {title:'Título próprio',description:'Descrição',privacyStatus:'unlisted',madeForKids:true,containsSyntheticMedia:true};
+test('Mongoose accepts the TikTok quota aggregation update pipeline when enabled', () => {
+  assert.doesNotThrow(() => TikTokPostingQuota.findOneAndUpdate(
+    { _id: 'content-posting' },
+    [{ $set: { users: [] } }],
+    { returnDocument: 'after', updatePipeline: true },
+  ));
+});
 test('YouTube defaults private and respects explicit metadata and disclosures', () => {
   assert.equal(youtubeMetadata('Título\nDescrição').status.privacyStatus,'private');
   const metadata = youtubeMetadata('Não usar',youtube);
@@ -57,4 +70,52 @@ test('Facebook rejects unavailable formats and supports text without media', () 
   const input = {caption:'Texto',platforms:['facebook'],scheduledFor:'2030-01-01T00:00:00Z',timeZone:'UTC',mediaUrls:[],destinations:[{platform:'facebook',accountId:'b'.repeat(24),format:'feed'}]};
   assert.equal(typeof validatePostInput(input,'a'.repeat(64),false,0),'object');
   assert.equal(typeof validatePostInput({...input,destinations:[{...input.destinations[0],format:'story'}]},'a'.repeat(64),false,0),'string');
+});
+test('Instagram supports Meta Unified Login (config_id) and Facebook Login over graph.facebook.com', async () => {
+  const baseConfig = {
+    clientId: 'meta-app-id',
+    clientSecret: 'meta-secret',
+    redirectUri: 'https://feedsync.example/api/social/meta/callback',
+    graphApiVersion: 'v26.0',
+    loginMode: 'facebook',
+  };
+  const fbLoginUrl = createInstagramAuthorizationUrl(baseConfig, 'state-1');
+  assert.equal(fbLoginUrl.origin, 'https://www.facebook.com');
+  assert.ok(fbLoginUrl.searchParams.get('scope')?.includes('instagram_content_publish'));
+
+  const unifiedUrl = createInstagramAuthorizationUrl({ ...baseConfig, configId: 'cfg-999' }, 'state-2');
+  assert.equal(unifiedUrl.searchParams.get('config_id'), 'cfg-999');
+  assert.equal(unifiedUrl.searchParams.get('scope'), null);
+
+  const accounts = await exchangeInstagramAuthorizationCodeForAccounts(
+    { ...baseConfig, configId: 'cfg-999' },
+    'auth-code',
+    async (input) => {
+      const url = String(input);
+      if (url.includes('oauth/access_token')) {
+        return Response.json({ access_token: 'EAA-unified-token' });
+      }
+      if (url.includes('me/permissions')) {
+        return Response.json({
+          data: [
+            { permission: 'instagram_basic', status: 'granted' },
+            { permission: 'instagram_content_publish', status: 'granted' },
+          ],
+        });
+      }
+      if (url.includes('me/accounts')) {
+        return Response.json({ data: [] });
+      }
+      if (url.includes('me/assigned_instagram_accounts')) {
+        return Response.json({
+          data: [{ id: '17841400000000000', username: 'nexusync_oficial' }],
+        });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    },
+  );
+  assert.equal(accounts.length, 1);
+  assert.equal(accounts[0].platformAccountId, '17841400000000000');
+  assert.equal(accounts[0].accountName, 'nexusync_oficial');
+  assert.equal(accounts[0].accessToken, 'EAA-unified-token');
 });

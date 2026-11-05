@@ -52,7 +52,7 @@ export function validateTikTokUploadUrl(value: string) {
     throw new TikTokApiError('O TikTok retornou uma URL de envio inválida.');
   }
   if (
-    url.toString().length > 256 ||
+    url.toString().length > 2048 ||
     url.protocol !== 'https:' ||
     url.hostname !== TIKTOK_UPLOAD_HOST ||
     url.pathname !== '/video/' ||
@@ -155,7 +155,7 @@ export async function initializeTikTokVideoUpload(
   if (
     typeof data.publish_id !== 'string' ||
     data.publish_id.length === 0 ||
-    data.publish_id.length > 64 ||
+    data.publish_id.length > 256 ||
     typeof data.upload_url !== 'string'
   ) {
     throw new TikTokApiError(

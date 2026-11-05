@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
 export function serviceConfig(env = process.env) {
-  const origin = new URL(env.QUEUE_APP_URL || 'http://app:3000');
+  const origin = new URL(env.QUEUE_APP_URL || 'http://localhost:3000');
   if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) throw new Error('QUEUE_APP_URL inválida.');
   if (!env.CRON_SECRET || env.CRON_SECRET.length < 32) throw new Error('CRON_SECRET ausente ou inválido.');
   return {origin:origin.origin,secret:env.CRON_SECRET,enabled:env.PUBLISHING_ENABLED === 'true',webhook:env.OPERATIONS_ALERT_WEBHOOK || ''};

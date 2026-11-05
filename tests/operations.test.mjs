@@ -2,9 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assessQueueHealth } from '../src/libs/operationsHealth.ts';
 import { isOperationsAuthorized } from '../src/libs/operationsAuth.ts';
-import { queueTick, monitorTick } from '../ops/queue-services.mjs';
+import { queueTick, monitorTick, serviceConfig } from '../ops/queue-services.mjs';
 const secret='s'.repeat(32);
 const config={origin:'http://app:3000',secret,enabled:true,webhook:''};
+test('development scheduler targets localhost and accepts an explicit Compose host', () => {
+  assert.equal(serviceConfig({CRON_SECRET:secret}).origin,'http://localhost:3000');
+  assert.equal(serviceConfig({CRON_SECRET:secret,QUEUE_APP_URL:'http://app:3000'}).origin,'http://app:3000');
+});
 test('operational health distinguishes no work from missing, stopped and stuck scheduler', () => {
   const now=1_000_000;
   assert.equal(assessQueueHealth(null,now).status,'missing');

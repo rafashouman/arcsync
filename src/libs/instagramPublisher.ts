@@ -47,13 +47,17 @@ function isGraphRecord(value: unknown): value is GraphRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function getGraphUrl(path: string) {
-  const { graphApiVersion } = getInstagramOAuthConfig();
+function getGraphUrl(path: string, accessToken?: string) {
+  const { graphApiVersion, loginMode } = getInstagramOAuthConfig();
   const safePath = path
     .split('/')
     .map((segment) => encodeURIComponent(segment))
     .join('/');
-  return new URL(`https://graph.instagram.com/${graphApiVersion}/${safePath}`);
+  const host =
+    loginMode === 'instagram' || accessToken?.startsWith('IG')
+      ? 'graph.instagram.com'
+      : 'graph.facebook.com';
+  return new URL(`https://${host}/${graphApiVersion}/${safePath}`);
 }
 
 async function graphRequest(
@@ -61,7 +65,7 @@ async function graphRequest(
   accessToken: string,
   fields: Record<string, string>,
 ): Promise<GraphRecord> {
-  const url = getGraphUrl(path);
+  const url = getGraphUrl(path, accessToken);
   let response: Response;
   try {
     response = await fetch(url, {
@@ -207,7 +211,7 @@ async function getValidAccessToken(workspaceId: string, accountId?: string) {
 }
 
 async function getContainerStatus(containerId: string, accessToken: string) {
-  const url = getGraphUrl(containerId);
+  const url = getGraphUrl(containerId, accessToken);
   url.searchParams.set('fields', 'status_code');
   url.searchParams.set('access_token', accessToken);
 

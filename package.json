@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "queue:dev": "node --env-file=.env.local ops/queue-services.mjs scheduler",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

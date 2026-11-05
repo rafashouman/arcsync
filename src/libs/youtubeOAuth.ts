@@ -24,9 +24,9 @@ export interface YouTubeOAuthConfig {
 }
 
 export function getYouTubeOAuthConfig(): YouTubeOAuthConfig {
-  const clientId = process.env.YOUTUBE_CLIENT_ID;
-  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-  const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
+  const clientId = process.env.YOUTUBE_CLIENT_ID?.trim();
+  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET?.trim();
+  const redirectUri = process.env.YOUTUBE_REDIRECT_URI?.trim();
   if (!clientId || !clientSecret || !redirectUri) {
     throw new SocialOAuthConfigurationError(
       'Configure YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET e YOUTUBE_REDIRECT_URI.',
@@ -86,6 +86,12 @@ async function getChannel(accessToken: string) {
   const result = await requestJson('YouTube', url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  if (!result.ok) {
+    console.error('A API do YouTube recusou a consulta do canal:', {
+      status: result.status,
+      body: result.body,
+    });
+  }
   const channel =
     result.ok &&
     isRecord(result.body) &&

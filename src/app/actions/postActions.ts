@@ -3,7 +3,9 @@ import { listPostAccounts } from './destinationActions';
 
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/src/libs/authSession';
+import { randomUUID } from 'crypto';
 import {
+  claimDuePost,
   createPostForWorkspace,
   deletePostForWorkspace,
   getPostForWorkspace,
@@ -12,6 +14,7 @@ import {
   reviewPostForWorkspace,
   updatePostForWorkspace,
 } from '@/src/data/posts';
+import { publishClaimedPost } from '@/src/libs/postPublisher';
 import { getWorkspaceContext } from '@/src/data/workspaces';
 import type { PostRecord } from '@/src/types/post';
 import { getMediaOwnerKey } from '@/src/libs/mediaStorage';
@@ -34,9 +37,33 @@ type ActionResult =
   | { success: true; post: PostRecord }
   | { success: false; error: string };
 
+export async function processDuePostsAction(): Promise<{ processed: number }> {
+  const user = await getCurrentUser();
+  if (!user || process.env.PUBLISHING_ENABLED !== 'true') {
+    return { processed: 0 };
+  }
+  let processed = 0;
+  try {
+    for (let step = 0; step < 3; step++) {
+      const claimed = await claimDuePost(new Date(), randomUUID(), 10 * 60 * 1000);
+      if (!claimed) break;
+      processed++;
+      await publishClaimedPost(claimed);
+    }
+    if (processed > 0) {
+      revalidatePath('/');
+      revalidatePath('/calendar');
+    }
+  } catch (error) {
+    console.error('Erro ao processar fila de publicações:', error);
+  }
+  return { processed };
+}
+
 export async function createScheduledPost(
   input: unknown,
   asDraft = false,
+  publishNow = false,
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) {
@@ -53,6 +80,7 @@ export async function createScheduledPost(
       input,
       getMediaOwnerKey(workspace.workspaceId),
       saveAsDraft,
+      publishNow ? Date.now() - 60_000 : Date.now(),
     );
     if (typeof data === 'string') {
       return { success: false, error: data };
@@ -65,13 +93,17 @@ export async function createScheduledPost(
     const approvalStatus = !saveAsDraft && requiresPostApproval(workspace.role)
       ? 'pending'
       : 'not_required';
-    const post = await createPostForWorkspace(
+    let post = await createPostForWorkspace(
       workspace.workspaceId,
       user.uid,
       data,
       saveAsDraft ? 'draft' : 'pending',
       approvalStatus,
     );
+    if (publishNow && !saveAsDraft && approvalStatus === 'not_required' && process.env.PUBLISHING_ENABLED === 'true') {
+      await processDuePostsAction();
+      post = (await getPostForWorkspace(workspace.workspaceId, post._id)) ?? post;
+    }
     revalidatePath('/');
     revalidatePath('/calendar');
     revalidatePath('/approvals');
@@ -86,6 +118,7 @@ export async function updateScheduledPost(
   id: string,
   input: unknown,
   asDraft = false,
+  publishNow = false,
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) {
@@ -109,7 +142,7 @@ export async function updateScheduledPost(
       input,
       getMediaOwnerKey(workspace.workspaceId),
       saveAsDraft,
-      Date.now(),
+      publishNow ? Date.now() - 60_000 : Date.now(),
       [...source.mediaUrls, ...(source.destinations ?? []).flatMap(d => d.mediaUrls ?? [])],
     );
     if (typeof data === 'string') {
@@ -123,7 +156,7 @@ export async function updateScheduledPost(
     const approvalStatus = !saveAsDraft && requiresPostApproval(workspace.role)
       ? 'pending'
       : 'not_required';
-    const post = await updatePostForWorkspace(
+    let post = await updatePostForWorkspace(
       workspace.workspaceId,
       id,
       user.uid,
@@ -136,6 +169,10 @@ export async function updateScheduledPost(
         success: false,
         error: 'Agendamento não encontrado ou não pode mais ser alterado.',
       };
+    }
+    if (publishNow && !saveAsDraft && approvalStatus === 'not_required' && process.env.PUBLISHING_ENABLED === 'true') {
+      await processDuePostsAction();
+      post = (await getPostForWorkspace(workspace.workspaceId, post._id)) ?? post;
     }
 
     revalidatePath('/');
@@ -272,7 +309,7 @@ export async function retryFailedPost(
       }
     }
 
-    const post = await retryFailedPostForWorkspace(
+    let post = await retryFailedPostForWorkspace(
       workspace.workspaceId,
       id,
       new Date(),
@@ -282,6 +319,10 @@ export async function retryFailedPost(
         success: false,
         error: 'O post mudou de estado ou não pode ser tentado novamente.',
       };
+    }
+    if (process.env.PUBLISHING_ENABLED === 'true') {
+      await processDuePostsAction();
+      post = (await getPostForWorkspace(workspace.workspaceId, post._id)) ?? post;
     }
 
     revalidatePath('/');

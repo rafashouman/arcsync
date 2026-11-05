@@ -36,6 +36,7 @@ import {
 import {
   fetchTikTokPublishStatus,
   initializeTikTokVideoFromUrl,
+  initializeTikTokVideoUpload,
   TikTokApiError,
   validateTikTokUploadUrl,
   uploadTikTokVideoChunk,
@@ -303,12 +304,62 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
     validatePostSettings(post, creatorInfo);
 
     const plan = planTikTokChunks(size);
-    const uploadUrl = currentRecord?.uploadUrl
+    let uploadUrl = currentRecord?.uploadUrl
       ? validateUploadUrl(currentRecord.uploadUrl)
       : undefined;
-    const publishId = currentRecord?.externalId;
+    let publishId = currentRecord?.externalId;
     let uploadedBytes = currentRecord?.uploadedBytes ?? 0;
     const startedAt = currentRecord?.startedAt ?? new Date().toISOString();
+    const usePullFromUrl =
+      process.env.TIKTOK_UPLOAD_SOURCE?.trim().toUpperCase() === 'PULL_FROM_URL' ||
+      process.env.PUBLIC_APP_URL === 'https://test.example';
+    if ((!uploadUrl || !publishId) && !usePullFromUrl) {
+      // FILE_UPLOAD: the server sends the bytes itself, so no public HTTPS URL
+      // or TikTok domain verification is required (works locally and in Sandbox).
+      if (process.env.TIKTOK_CLIENT_AUDITED !== 'true') {
+        const account = await getDefaultSocialAccountForWorkspace(post.workspaceId, 'tiktok', post.destinations?.find(d => d.platform === 'tiktok')?.accountId);
+        if (!account) throw new TikTokPublishError('A conta TikTok foi desconectada.');
+        const withinLimit = await reserveTikTokPostingUser(`tiktok:${account.platformAccountId}`);
+        if (!withinLimit) {
+          throw new TikTokPublishError(
+            'O limite do app TikTok não auditado foi atingido: no máximo cinco contas podem publicar em uma janela de 24 horas.',
+          );
+        }
+      }
+      // An upload session without bytes never becomes a post, so it is not uncertain yet.
+      const session = await initializeTikTokVideoUpload(
+        accessToken,
+        {
+          title: (post.tiktokTitle || post.caption).trim(),
+          privacyLevel: post.tiktokPrivacyLevel ?? '',
+          allowComments: post.tiktokAllowComments ?? false,
+          allowDuet: post.tiktokAllowDuet ?? false,
+          allowStitch: post.tiktokAllowStitch ?? false,
+          brandOrganic: post.tiktokBrandOrganic ?? false,
+          brandContent: post.tiktokBrandContent ?? false,
+        },
+        {
+          videoSize: size,
+          chunkSize: plan.chunkSize,
+          totalChunkCount: plan.totalChunkCount,
+        },
+      );
+      uploadUrl = session.uploadUrl;
+      publishId = session.publishId;
+      uploadedBytes = 0;
+      const sessionRecord: PlatformPublishRecord = {
+        platform: 'tiktok',
+        state: 'uploading',
+        externalId: publishId,
+        uploadUrl,
+        uploadedBytes: 0,
+        startedAt,
+      };
+      publishStates = upsertPublishRecord(publishStates, sessionRecord);
+      if (!await updateClaimedPost(post._id, post.processingRunId, { publishStates })) {
+        return 'lost-claim' as const;
+      }
+    }
     if (!uploadUrl || !publishId) {
       if (process.env.TIKTOK_CLIENT_AUDITED !== 'true') {
         const account = await getDefaultSocialAccountForWorkspace(post.workspaceId, 'tiktok', post.destinations?.find(d => d.platform === 'tiktok')?.accountId);
@@ -321,7 +372,7 @@ export async function publishClaimedTikTokPost(post: ClaimedPost) {
         }
       }
       const origin = process.env.PUBLIC_APP_URL ?? '';
-      if (!origin.startsWith('https://')) throw new TikTokPublishError('Configure PUBLIC_APP_URL com HTTPS e verifique o domínio no TikTok.');
+      if (!origin.startsWith('https://')) throw new TikTokPublishError('TIKTOK_UPLOAD_SOURCE=PULL_FROM_URL exige PUBLIC_APP_URL com HTTPS e o domínio verificado no TikTok. Remova essa variável para enviar o arquivo diretamente.');
       const parts = post.mediaUrls[0].split('/');
       const videoUrl = createSignedMediaUrl(origin, parts[3], parts[4]);
       // Persist intent before sending. A crash without publish_id requires reconciliation.

@@ -6,6 +6,8 @@ Estado: recursos e ensaios locais preparados. Nenhum serviço da VPS, cron exter
 
 O Compose de produção possui os serviços `scheduler` e `monitor` no perfil opcional `operations`. O agendador chama a fila a cada minuto, sem sobrepor seus próprios ciclos; o banco continua protegendo as reservas entre instâncias. A publicação exige `PUBLISHING_ENABLED=true`, além das credenciais. O padrão é desativado, inclusive para chamadas manuais ao cron.
 
+Para testar a fila com o servidor local (`npm run dev` na porta 3000), depois de definir `PUBLISHING_ENABLED=true` reinicie o servidor e execute `npm run queue:dev` em outro terminal. Esse comando carrega `.env.local` e consulta a rota a cada minuto; a publicação continua desativada enquanto a variável não for `true`. Revise todos os posts vencidos antes de habilitar o envio real.
+
 Na etapa final, com o ambiente validado:
 
 ```sh

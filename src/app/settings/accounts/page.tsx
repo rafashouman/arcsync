@@ -45,8 +45,8 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
     process.env.MONGODB_URI ? listSocialAccountsForWorkspace(workspace.workspaceId, 'facebook') : Promise.resolve([]),
   ]);
   const isOAuthConfigured = Boolean(
-    process.env.INSTAGRAM_APP_ID &&
-      process.env.INSTAGRAM_APP_SECRET &&
+    (process.env.INSTAGRAM_APP_ID || process.env.FACEBOOK_APP_ID) &&
+      (process.env.INSTAGRAM_APP_SECRET || process.env.FACEBOOK_APP_SECRET) &&
       process.env.INSTAGRAM_REDIRECT_URI,
   );
   const socialOAuthConfigured: Record<OAuthPlatform, boolean> = {

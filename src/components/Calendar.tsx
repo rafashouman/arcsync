@@ -20,7 +20,7 @@ import {
   TikTokIcon,
   YoutubeIcon,
 } from '@/src/components/icons/SocialIcons';
-import { reschedulePostToDay } from '@/src/app/actions/postActions';
+import { processDuePostsAction, reschedulePostToDay } from '@/src/app/actions/postActions';
 import { useSchedulerStore } from '@/src/store/useSchedulerStore';
 import {
   formatZonedDate,
@@ -182,9 +182,33 @@ export default function SchedulingCalendar({
   const router = useRouter();
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(intervalId);
-  }, []);
+    let active = true;
+    const runDueCheck = async () => {
+      setNow(new Date());
+      const hasDueOrProcessing = posts.some(
+        (post) =>
+          post.status === 'processing' ||
+          (post.status === 'pending' &&
+            post.approvalStatus !== 'pending' &&
+            post.approvalStatus !== 'rejected' &&
+            typeof post.scheduledFor === 'string' &&
+            Date.parse(post.scheduledFor) <= Date.now()),
+      );
+      if (!hasDueOrProcessing) return;
+      const result = await processDuePostsAction().catch(() => ({ processed: 0 }));
+      if (active && result.processed > 0) {
+        router.refresh();
+      }
+    };
+    void runDueCheck();
+    const intervalId = window.setInterval(() => {
+      void runDueCheck();
+    }, 20_000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [posts, router]);
 
   const visiblePosts = useMemo(
     () =>

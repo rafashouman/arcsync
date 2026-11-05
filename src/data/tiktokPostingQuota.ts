@@ -75,7 +75,7 @@ export async function reserveTikTokPostingUser(userId: string) {
         },
       },
     ],
-    { new: true },
+    { returnDocument: 'after', updatePipeline: true },
   );
   return Boolean(reserved);
 }

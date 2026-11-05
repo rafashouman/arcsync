@@ -9,7 +9,7 @@ import {
 } from '@/src/data/accounts';
 import { assertSocialTokenEncryptionConfigured } from '@/src/libs/socialTokenCrypto';
 import {
-  exchangeInstagramAuthorizationCode,
+  exchangeInstagramAuthorizationCodeForAccounts,
   getInstagramOAuthConfig,
   InstagramOAuthConfigurationError,
   InstagramOAuthProviderError,
@@ -91,11 +91,17 @@ export async function GET(request: Request) {
   try {
     const config = getInstagramOAuthConfig();
     assertSocialTokenEncryptionConfigured();
-    const account = await exchangeInstagramAuthorizationCode(config, code);
-    await saveInstagramAccount(workspace.workspaceId, user.uid, {
-      ...account,
-      tokenIssuedAt: new Date(),
-    });
+    const accounts = await exchangeInstagramAuthorizationCodeForAccounts(
+      config,
+      code,
+    );
+    const tokenIssuedAt = new Date();
+    for (const account of accounts) {
+      await saveInstagramAccount(workspace.workspaceId, user.uid, {
+        ...account,
+        tokenIssuedAt,
+      });
+    }
     return redirectToSettings(request, 'connected');
   } catch (error) {
     if (error instanceof InstagramOAuthConfigurationError) {
