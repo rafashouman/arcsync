@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import { NextResponse } from 'next/server';
+import { publicUrl } from '@/src/libs/publicUrl';
 import { getCurrentUser } from '@/src/libs/authSession';
 import { getWorkspaceContext } from '@/src/data/workspaces';
 import { canManageWorkspace } from '@/src/libs/workspacePermissions';
@@ -18,13 +19,13 @@ const STATE_MAX_AGE_SECONDS = 10 * 60;
 
 function redirectToSettings(request: Request, status: string) {
   return NextResponse.redirect(
-    new URL(`/settings/accounts?social=${encodeURIComponent(status)}`, request.url),
+    publicUrl(`/settings/accounts?social=${encodeURIComponent(status)}`, request),
   );
 }
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.redirect(new URL('/login', request.url));
+  if (!user) return NextResponse.redirect(publicUrl('/login', request));
   if (!process.env.MONGODB_URI) return redirectToSettings(request, 'storage-required');
 
   try {

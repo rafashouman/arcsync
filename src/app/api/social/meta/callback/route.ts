@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { publicUrl } from '@/src/libs/publicUrl';
 import { getCurrentUser } from '@/src/libs/authSession';
 import { getWorkspaceContext } from '@/src/data/workspaces';
 import { canManageWorkspace } from '@/src/libs/workspacePermissions';
@@ -31,7 +32,7 @@ type CallbackStatus =
 
 function redirectToSettings(request: Request, status: CallbackStatus) {
   const response = NextResponse.redirect(
-    new URL(`/settings/accounts?meta=${status}`, request.url),
+    publicUrl(`/settings/accounts?meta=${status}`, request),
   );
   response.cookies.set(STATE_COOKIE_NAME, '', {
     httpOnly: true,

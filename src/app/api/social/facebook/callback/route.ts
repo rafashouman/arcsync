@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { publicUrl } from '@/src/libs/publicUrl';
 import { AccountStorageUnavailableError } from '@/src/data/accounts';
 import { saveSocialAccount } from '@/src/data/socialAccounts';
 import { getCurrentUser } from '@/src/libs/authSession';
@@ -31,7 +32,7 @@ type CallbackStatus =
 
 function redirectToSettings(request: Request, status: CallbackStatus) {
   const response = NextResponse.redirect(
-    new URL(`/settings/accounts?social=${status}`, request.url),
+    publicUrl(`/settings/accounts?social=${status}`, request),
   );
   response.cookies.set(STATE_COOKIE_NAME, '', {
     httpOnly: true,
