@@ -1,5 +1,4 @@
 const TIKTOK_API_ROOT = 'https://open.tiktokapis.com/v2/post/publish/';
-const TIKTOK_UPLOAD_HOST = 'open-upload.tiktokapis.com';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -54,7 +53,7 @@ export function validateTikTokUploadUrl(value: string) {
   if (
     url.toString().length > 2048 ||
     url.protocol !== 'https:' ||
-    url.hostname !== TIKTOK_UPLOAD_HOST ||
+    !/^open-upload(-[a-z0-9]+)*\.tiktokapis\.com$/.test(url.hostname) ||
     url.pathname !== '/video/' ||
     url.username ||
     url.password ||

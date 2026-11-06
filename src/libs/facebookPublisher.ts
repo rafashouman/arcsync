@@ -6,6 +6,7 @@ import { getValidSocialAccessToken } from '@/src/libs/socialTokens';
 import { createSignedMediaUrl, getMediaFilePath, getMediaOwnerKey } from '@/src/libs/mediaStorage';
 import { getPublishingIssue } from '@/src/libs/postValidation';
 import { upsertPublishRecord, type PlatformPublishRecord } from '@/src/libs/publishPlanning';
+import { PlatformPublishError } from '@/src/libs/publishTypes';
 import { FacebookPublishError, publishFacebookPagePost } from '@/src/libs/facebookPublishingApi';
 
 export async function publishClaimedFacebookPost(post: ClaimedPost) {
@@ -41,7 +42,8 @@ export async function publishClaimedFacebookPost(post: ClaimedPost) {
     return await completeClaimedPlatform(post,id,states) ? 'published' as const : 'lost-claim' as const;
   } catch (error) {
     if (error instanceof FacebookPublishError) uncertain = error.mayHaveSucceeded;
-    const message = error instanceof FacebookPublishError ? error.message : 'Não foi possível publicar no Facebook. Confira a conexão e a mídia.';
+    if (!(error instanceof FacebookPublishError)) console.error('Facebook publish failed', error);
+    const message = error instanceof FacebookPublishError || error instanceof PlatformPublishError ? error.message : 'Não foi possível publicar no Facebook. Confira a conexão e a mídia.';
     states = upsertPublishRecord(states,{platform:'facebook',state:'failed',error:message,mayHaveSucceeded:uncertain});
     await failClaimedPlatform(post,states,uncertain);
     return uncertain ? 'uncertain' as const : 'failed' as const;
