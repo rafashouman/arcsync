@@ -11,7 +11,7 @@ import { getCurrentUser } from '@/src/libs/authSession';
 import { canReviewWorkspacePosts } from '@/src/libs/workspacePermissions';
 
 export const metadata: Metadata = {
-  title: 'Aprovações | FeedSync',
+  title: 'Aprovações | Arcsync',
   description: 'Revise as publicações da sua equipe antes do envio.',
 };
 

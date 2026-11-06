@@ -27,7 +27,7 @@ export async function monitorTick(config, previous, fetcher = fetch, log = conso
   } catch { /* Treat connection failure as an actionable state. */ }
   const state = ['healthy','running'].includes(status) ? 'healthy' : status;
   if (state === previous || (previous === undefined && state === 'healthy')) return state;
-  const event = {service:'feedsync-queue',status:state,at:new Date().toISOString(),event:state === 'healthy' ? 'recovered' : 'attention-required'};
+  const event = {service:'arcsync-queue',status:state,at:new Date().toISOString(),event:state === 'healthy' ? 'recovered' : 'attention-required'};
   log(JSON.stringify(event));
   if (config.webhook) {
     const target = new URL(config.webhook);
@@ -48,7 +48,7 @@ async function main() {
   while (!shutdown.signal.aborted) {
     const started = Date.now();
     try {
-      if (mode === 'scheduler') console.log(JSON.stringify({service:'feedsync-scheduler',...await queueTick(config),at:new Date().toISOString()}));
+      if (mode === 'scheduler') console.log(JSON.stringify({service:'arcsync-scheduler',...await queueTick(config),at:new Date().toISOString()}));
       else previous = await monitorTick(config,previous);
     } catch { console.error('Falha no serviço operacional; nova tentativa no próximo ciclo.'); }
     // Never overlap a request with the next tick or log secrets/remote error bodies.

@@ -7,13 +7,13 @@ Preparado em 02/11/2026. Status: material preparado; nenhum cadastro, consentime
 ## Identidade informada
 
 Responsável informado: **NexuSync**. Contato público: **contato@nexusync.online**.
-Produto identificado atualmente na interface: **FeedSync**. O nome do responsável não foi tratado como pedido de renomear o produto. Use essa distinção consistentemente nos cadastros; caso o nome comercial do produto mude, alinhe interface e formulários antes da submissão.
+Produto identificado atualmente na interface: **Arcsync**. O nome do responsável não foi tratado como pedido de renomear o produto. Use essa distinção consistentemente nos cadastros; caso o nome comercial do produto mude, alinhe interface e formulários antes da submissão.
 
 Esses dados foram preenchidos em `.env.local` e no exemplo de configuração, exclusivamente nos campos `LEGAL_OPERATOR_NAME` e `SUPPORT_EMAIL`. Não foram cadastrados CNPJ, endereço, natureza jurídica ou pessoa física, pois não foram informados. Forneça documentos apenas no painel oficial se solicitados. A existência/recebimento da caixa de e-mail não foi testada.
 
 ## Descrição para o cadastro
 
-O FeedSync é uma aplicação web de planejamento e publicação de conteúdo original para criadores e equipes. O usuário conecta contas que está autorizado a gerenciar, escolhe a conta de destino, prepara mídia e texto, revisa as opções específicas de cada rede e define o horário do envio. O calendário, o histórico e o monitoramento mostram o resultado de cada destino. O produto oferece papéis de equipe e aprovação de conteúdo. Nenhuma publicação é iniciada apenas ao conectar uma conta.
+O Arcsync é uma aplicação web de planejamento e publicação de conteúdo original para criadores e equipes. O usuário conecta contas que está autorizado a gerenciar, escolhe a conta de destino, prepara mídia e texto, revisa as opções específicas de cada rede e define o horário do envio. O calendário, o histórico e o monitoramento mostram o resultado de cada destino. O produto oferece papéis de equipe e aprovação de conteúdo. Nenhuma publicação é iniciada apenas ao conectar uma conta.
 
 ## Endereços a cadastrar na etapa final
 

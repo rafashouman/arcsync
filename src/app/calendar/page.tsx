@@ -44,7 +44,7 @@ async function ScheduledContent() {
       <header className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div>
-            <h1><Link href="/" aria-label="FeedSync — início"><BrandLogo /></Link></h1>
+            <h1><Link href="/" aria-label="Arcsync — início"><BrandLogo /></Link></h1>
             <p className="mt-0.5 text-xs text-slate-500">
               {workspace.workspaceName} · {workspaceRoleLabels[workspace.role]}
             </p>

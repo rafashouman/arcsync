@@ -34,6 +34,6 @@ cp -- "$FEEDSYNC_ENV_FILE" "$TEMP_DIR/snapshot/environment.env"
 tar -czf "$TEMP_DIR/snapshot/uploads.tar.gz" -C "$FEEDSYNC_UPLOADS_HOST_DIR" .
 printf '{"format":1,"createdAt":"%s","includes":["database","uploads","environment"]}\n' "$(date -u +%FT%TZ)" > "$TEMP_DIR/snapshot/manifest.json"
 tar -cf "$TEMP_DIR/snapshot.tar" -C "$TEMP_DIR/snapshot" .
-OUTPUT="$BACKUP_OUTPUT_DIR/feedsync-$(date -u +%Y%m%dT%H%M%SZ)-${RANDOM}.fsbk"
+OUTPUT="$BACKUP_OUTPUT_DIR/arcsync-$(date -u +%Y%m%dT%H%M%SZ)-${RANDOM}.fsbk"
 node "$SCRIPT_DIR/archive-crypto.mjs" encrypt "$TEMP_DIR/snapshot.tar" "$OUTPUT" "$BACKUP_KEY_FILE"
 echo 'Backup criptografado concluído. Serviços anteriormente ativos serão reiniciados.'

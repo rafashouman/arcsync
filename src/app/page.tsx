@@ -22,7 +22,7 @@ async function Dashboard() {
     { label: 'Precisam de atenção', value: posts.filter(p => p.status === 'failed' || p.publishMayHaveSucceeded).length },
   ];
   return <div className="dashboard">
-    <header className="dashboard-header"><Link href="/" className="brand" aria-label="FeedSync — início"><BrandLogo /></Link><div className="flex flex-wrap items-center gap-4"><span className="dashboard-muted text-sm">{workspace.workspaceName}</span><SignOutButton email={user.email}/></div></header>
+    <header className="dashboard-header"><Link href="/" className="brand" aria-label="Arcsync — início"><BrandLogo /></Link><div className="flex flex-wrap items-center gap-4"><span className="dashboard-muted text-sm">{workspace.workspaceName}</span><SignOutButton email={user.email}/></div></header>
     <nav className="dashboard-nav" aria-label="Navegação principal"><Link href="/" aria-current="page">Início</Link><Link href="/calendar">Calendário</Link><Link href="/monitoring">Monitoramento</Link><Link href="/settings/accounts">Contas sociais</Link></nav>
     <section className="dashboard-hero"><div><p className="dashboard-eyebrow">SEU ESPAÇO DE CRIAÇÃO</p><h1>Boas ideias merecem<br/>ganhar o mundo.</h1><p className="dashboard-muted mt-5 max-w-lg leading-7">Organize seus conteúdos, acompanhe as publicações e planeje os próximos passos da sua presença nas redes.</p><Link className="dashboard-primary mt-7" href="/calendar">Planejar publicações <ArrowUpRight size={18}/></Link></div><div className="hero-art" aria-hidden="true"><div className="hero-card"><CalendarDays size={42}/><span>Uma ideia.<br/>Muitas possibilidades.</span><div className="hero-dots"><i/><i/><i/><i/></div></div><span className="hero-label">CRIE · PLANEJE · PUBLIQUE</span></div></section>
     <section className="dashboard-stats" aria-label="Resumo das publicações">{counts.map(item => <div className="dashboard-panel" key={item.label}><span className="dashboard-muted text-sm">{item.label}</span><p className="mt-3 text-3xl font-semibold">{item.value}</p></div>)}</section>
@@ -33,7 +33,7 @@ async function Dashboard() {
       {href:'/settings/team',icon:Users,title:'Sua equipe',text:'Organize a colaboração'},
       {href:'/approvals',icon:FileText,title:'Aprovações',text:'Acompanhe as revisões'},
     ].map(item => <Link className="dashboard-recent" href={item.href} key={item.href}><span className="dashboard-icon"><item.icon size={19}/></span><span className="flex-1"><span className="block text-sm font-medium">{item.title}</span><span className="dashboard-muted text-xs">{item.text}</span></span><ArrowUpRight size={16}/></Link>)}</div></section></div>
-    <footer className="dashboard-muted py-8 text-xs">FeedSync · Mais espaço para criar.</footer>
+    <footer className="dashboard-muted py-8 text-xs">Arcsync · Mais espaço para criar.</footer>
   </div>;
 }
 export default function Home() {

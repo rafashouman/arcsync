@@ -3,8 +3,8 @@ import { Suspense } from 'react';
 import ResetPasswordContent from '@/src/components/ResetPasswordContent';
 
 export const metadata: Metadata = {
-  title: 'Redefinir senha | FeedSync',
-  description: 'Crie uma nova senha para sua conta FeedSync.',
+  title: 'Redefinir senha | Arcsync',
+  description: 'Crie uma nova senha para sua conta Arcsync.',
 };
 
 export default function ResetPasswordPage({

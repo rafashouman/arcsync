@@ -51,7 +51,7 @@ O script impede backups concorrentes, para app e scheduler, aguarda encerramento
 
 A chave do backup deve ficar separada dos arquivos e ter cópia em cofre. Perder essa chave impede restaurar. A cópia temporária sem criptografia é criada com acesso restrito e removida ao terminar; o host e seu disco também precisam de proteção. O `.fsbk` contém credenciais e deve ser tratado como sensível.
 
-O timer `ops/feedsync-backup.timer` prepara execução diária às 03h no fuso do servidor. Ajustar os caminhos da unit para staging/produção, criar `/etc/feedsync/backup.env` e validar um backup manual antes de instalar/ativar o timer. O arquivo fornecido não foi instalado. Encaminhar falhas da unit ao monitor operacional e monitorar a idade do último backup. Copiar os arquivos criptografados para armazenamento independente da VPS na etapa final.
+O timer `ops/arcsync-backup.timer` prepara execução diária às 03h no fuso do servidor. Ajustar os caminhos da unit para staging/produção, criar `/etc/arcsync/backup.env` e validar um backup manual antes de instalar/ativar o timer. O arquivo fornecido não foi instalado. Encaminhar falhas da unit ao monitor operacional e monitorar a idade do último backup. Copiar os arquivos criptografados para armazenamento independente da VPS na etapa final.
 
 ## Restauração e ensaio
 

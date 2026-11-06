@@ -7,23 +7,23 @@ import {
 import { isMatchingOAuthState } from '../src/libs/oauthState.ts';
 
 test('requires a matching origin, host, and forwarded protocol', () => {
-  const sameOrigin = new Request('https://feedsync.example/api/auth', {
+  const sameOrigin = new Request('https://arcsync.example/api/auth', {
     headers: {
-      origin: 'https://feedsync.example',
-      host: 'feedsync.example',
+      origin: 'https://arcsync.example',
+      host: 'arcsync.example',
     },
   });
-  const wrongProtocol = new Request('https://feedsync.example/api/auth', {
+  const wrongProtocol = new Request('https://arcsync.example/api/auth', {
     headers: {
-      origin: 'http://feedsync.example',
-      host: 'feedsync.example',
+      origin: 'http://arcsync.example',
+      host: 'arcsync.example',
     },
   });
   const behindProxy = new Request('http://127.0.0.1:3001/api/auth', {
     headers: {
-      origin: 'https://feedsync.example',
+      origin: 'https://arcsync.example',
       host: '127.0.0.1:3001',
-      'x-forwarded-host': 'feedsync.example',
+      'x-forwarded-host': 'arcsync.example',
       'x-forwarded-proto': 'https',
     },
   });
@@ -34,15 +34,15 @@ test('requires a matching origin, host, and forwarded protocol', () => {
 });
 
 test('reads valid JSON and rejects malformed or oversized streamed bodies', async () => {
-  const valid = new Request('https://feedsync.example/api/auth', {
+  const valid = new Request('https://arcsync.example/api/auth', {
     method: 'POST',
     body: JSON.stringify({ email: 'rafa@example.com' }),
   });
-  const invalid = new Request('https://feedsync.example/api/auth', {
+  const invalid = new Request('https://arcsync.example/api/auth', {
     method: 'POST',
     body: '{',
   });
-  const oversized = new Request('https://feedsync.example/api/auth', {
+  const oversized = new Request('https://arcsync.example/api/auth', {
     method: 'POST',
     body: 'x'.repeat(4097),
   });

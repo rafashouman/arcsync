@@ -76,7 +76,7 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
           {mode === 'login' ? 'Bem-vindo de volta' : 'Comece a organizar'}
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-          {mode === 'login' ? 'Entre no FeedSync' : 'Crie sua conta'}
+          {mode === 'login' ? 'Entre no Arcsync' : 'Crie sua conta'}
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-400">
           Planeje seus conteúdos para Instagram, TikTok e YouTube em um só lugar.

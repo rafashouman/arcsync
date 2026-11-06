@@ -32,7 +32,7 @@ export default function SignOutButton({ email }: { email: string | null }) {
   return (
     <div className="flex items-center gap-3">
       <span className="hidden max-w-[220px] truncate text-xs text-slate-400 sm:inline">
-        {email ?? 'Conta FeedSync'}
+        {email ?? 'Conta Arcsync'}
       </span>
       {errorMessage && (
         <span role="alert" className="text-[11px] text-rose-300">

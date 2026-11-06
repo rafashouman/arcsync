@@ -104,7 +104,7 @@ test('Instagram supports Meta Unified Login (config_id) and Facebook Login over 
   const baseConfig = {
     clientId: 'meta-app-id',
     clientSecret: 'meta-secret',
-    redirectUri: 'https://feedsync.example/api/social/meta/callback',
+    redirectUri: 'https://arcsync.example/api/social/meta/callback',
     graphApiVersion: 'v26.0',
     loginMode: 'facebook',
   };

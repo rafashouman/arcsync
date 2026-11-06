@@ -1,15 +1,15 @@
 [Unit]
-Description=FeedSync staging Docker Compose application
+Description=ArcSync staging Docker Compose application
 Requires=docker.service
 After=docker.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/feedsync-staging/current
-ExecStartPre=/usr/bin/docker compose --env-file .env -p feedsync-staging -f compose.production.yaml run --build --rm --no-deps env-check
-ExecStart=/usr/bin/docker compose --env-file .env -p feedsync-staging -f compose.production.yaml up --build --detach --remove-orphans app
-ExecStop=/usr/bin/docker compose --env-file .env -p feedsync-staging -f compose.production.yaml down
+WorkingDirectory=/opt/arcsync-staging/current
+ExecStartPre=/usr/bin/docker compose --env-file .env -p arcsync-staging -f compose.production.yaml run --build --rm --no-deps env-check
+ExecStart=/usr/bin/docker compose --env-file .env -p arcsync-staging -f compose.production.yaml up --build --detach --remove-orphans app
+ExecStop=/usr/bin/docker compose --env-file .env -p arcsync-staging -f compose.production.yaml down
 TimeoutStartSec=0
 TimeoutStopSec=60
 NoNewPrivileges=true

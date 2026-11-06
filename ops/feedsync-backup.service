@@ -1,12 +1,12 @@
 [Unit]
-Description=FeedSync encrypted backup (configure before enabling)
+Description=ArcSync encrypted backup (configure before enabling)
 After=docker.service
 Requires=docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/feedsync/current
-EnvironmentFile=/etc/feedsync/backup.env
-ExecStart=/usr/bin/bash /opt/feedsync/current/ops/backup.sh
+WorkingDirectory=/opt/arcsync/current
+EnvironmentFile=/etc/arcsync/backup.env
+ExecStart=/usr/bin/bash /opt/arcsync/current/ops/backup.sh
 UMask=0077
 TimeoutStartSec=30min

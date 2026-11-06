@@ -1,6 +1,13 @@
-# FeedSync
+# Arcsync
 
-FeedSync é um MVP de calendário editorial para planejar posts de Instagram,
+Marca atualizada de ArcSync para **Arcsync**. O símbolo está em
+`public/arcsync-mark.png` e a assinatura é renderizada por `BrandLogo` nos temas
+claro e escuro. Os nomes técnicos `arcsync` (serviços, caminhos, cookies,
+variáveis de ambiente e domínio existente) foram mantidos por compatibilidade.
+A alteração local não atualiza o nome/logo nos painéis dos provedores OAuth,
+o remetente SMTP configurado no ambiente nem publica uma nova versão na VPS.
+
+Arcsync é um MVP de calendário editorial para planejar posts de Instagram,
 TikTok e YouTube. Inclui visualização em calendário e lista, filtros por rede,
 criação/edição/exclusão de agendamentos e rascunhos, autenticação própria com
 MongoDB, workspaces compartilhados, equipe e aprovação de conteúdo.
@@ -50,25 +57,25 @@ Não envie nem versione credenciais: `.env.local` está ignorado pelo Git.
 
 ## Produção no VPS
 
-O FeedSync está publicado em
-[https://feedsync.focuspulse.site](https://feedsync.focuspulse.site), em um VPS
+O Arcsync está publicado em
+[https://arcsync.focuspulse.site](https://arcsync.focuspulse.site), em um VPS
 com Ubuntu 26.04 LTS. O domínio principal existente continua no mesmo servidor;
-o FeedSync usa um subdomínio e um virtual host Nginx próprios. O HTTPS é
+o Arcsync usa um subdomínio e um virtual host Nginx próprios. O HTTPS é
 gerenciado pelo Certbot, com renovação automática.
 
-O Next.js roda como serviço `feedsync`, em `127.0.0.1:3001`, atrás do Nginx.
-Os uploads persistem em `/opt/feedsync/uploads`. O MongoDB de produção é uma
+O Next.js roda como serviço `arcsync`, em `127.0.0.1:3001`, atrás do Nginx.
+Os uploads persistem em `/opt/arcsync/uploads`. O MongoDB de produção é uma
 instância isolada do aplicativo, com autenticação, limitada a
 `127.0.0.1:27018` e usuário com acesso de leitura e gravação somente ao banco
-`feedsync`. A instância MongoDB preexistente do VPS não é usada pelo FeedSync.
-Configure os segredos de produção em `/opt/feedsync/.env.production`; esse
+`arcsync`. A instância MongoDB preexistente do VPS não é usada pelo Arcsync.
+Configure os segredos de produção em `/opt/arcsync/.env.production`; esse
 arquivo não deve ser versionado nem substituído pela URI local de
 desenvolvimento.
 
 O cron chama `POST /api/cron/publish` a cada minuto usando um segredo mantido
 fora do repositório. A fila publica no Instagram ou YouTube quando as
 credenciais correspondentes estão configuradas. O cadastro e o login usam a
-instância MongoDB isolada do FeedSync; senhas são armazenadas com scrypt e as
+instância MongoDB isolada do Arcsync; senhas são armazenadas com scrypt e as
 sessões são tokens aleatórios guardados em cookies `httpOnly`, com seus hashes
 no banco. A recuperação de senha por e-mail está implementada; configure as
 variáveis SMTP no `.env.production` para habilitá-la neste ambiente.
@@ -77,9 +84,9 @@ variáveis SMTP no `.env.production` para habilitá-la neste ambiente.
 
 O workflow `.github/workflows/deploy-vps-staging.yml` é **manual** e só aceita
 execução a partir da branch `main`, após testes, lint, type-check e build Docker
-passarem. Ele publica exclusivamente em `/opt/feedsync-staging`, no serviço
-`feedsync-staging` e na porta local `3002`; não altera o deploy de produção em
-`/opt/feedsync`. O systemd executa Docker Compose, que valida as variáveis,
+passarem. Ele publica exclusivamente em `/opt/arcsync-staging`, no serviço
+`arcsync-staging` e na porta local `3002`; não altera o deploy de produção em
+`/opt/arcsync`. O systemd executa Docker Compose, que valida as variáveis,
 constrói a imagem marcada com o SHA do commit e inicia o container. A
 transferência exclui `.env*`, `uploads/`, `.next/`, `node_modules/` e `.git/`.
 O diretório `shared/uploads` persiste entre versões, e releases são ativadas
@@ -98,18 +105,18 @@ Antes de habilitar o workflow:
    verificada fora do GitHub Actions. Não coloque nenhum segredo no repositório.
 2. Na VPS, instale Docker Engine com o plugin Docker Compose, além de `rsync`,
    `curl`, `systemd`, Nginx e Certbot. Crie o grupo e usuário de serviço
-   `feedsync-staging`, separados do serviço de produção `feedsync`, e um usuário
+   `arcsync-staging`, separados do serviço de produção `arcsync`, e um usuário
    SSH de deploy dedicado. Adicione o usuário de deploy aos grupos
-   `feedsync-staging` e `feedsync-staging-deploy`; crie o segundo grupo e
-   instale [feedsync-staging-deploy.sudoers](./ops/hostinger/feedsync-staging-deploy.sudoers)
-   em `/etc/sudoers.d/feedsync-staging-deploy` com modo `0440`, validando-o com
+   `arcsync-staging` e `arcsync-staging-deploy`; crie o segundo grupo e
+   instale [arcsync-staging-deploy.sudoers](./ops/hostinger/arcsync-staging-deploy.sudoers)
+   em `/etc/sudoers.d/arcsync-staging-deploy` com modo `0440`, validando-o com
    `visudo -cf`. Esse arquivo limita o sudo às operações do serviço de staging.
-3. Crie `/opt/feedsync-staging` e `shared` como `root:feedsync-staging` com
-   modo `0750`; crie `releases` como `<deploy-user>:feedsync-staging` com modo
-   `2770`, e `shared/uploads` como `feedsync-staging:feedsync-staging` com modo
-   `0750`. Crie `/opt/feedsync-staging/shared/.env.production` como
-   `root:feedsync-staging`, modo `0640`. Configure-o diretamente na VPS com
-   `PUBLIC_APP_URL=https://staging.feedsync.focuspulse.site`, credenciais de um
+3. Crie `/opt/arcsync-staging` e `shared` como `root:arcsync-staging` com
+   modo `0750`; crie `releases` como `<deploy-user>:arcsync-staging` com modo
+   `2770`, e `shared/uploads` como `arcsync-staging:arcsync-staging` com modo
+   `0750`. Crie `/opt/arcsync-staging/shared/.env.production` como
+   `root:arcsync-staging`, modo `0640`. Configure-o diretamente na VPS com
+   `PUBLIC_APP_URL=https://staging.arcsync.focuspulse.site`, credenciais de um
    banco MongoDB de homologação separado da produção e as demais variáveis
    exigidas por `npm run check:env -- --production`. `MONGODB_URI` precisa usar
    um endereço acessível de dentro da rede Docker, por exemplo
@@ -119,16 +126,16 @@ Antes de habilitar o workflow:
    todas as interfaces. O container usa o usuário de serviço do host para
    gravar em `shared/uploads`. Não configure OAuth social ainda; os testes
    reais continuam reservados para a etapa final.
-4. Instale [feedsync-staging.service](./ops/hostinger/feedsync-staging.service)
-   em `/etc/systemd/system/feedsync-staging.service`, execute
+4. Instale [arcsync-staging.service](./ops/hostinger/arcsync-staging.service)
+   em `/etc/systemd/system/arcsync-staging.service`, execute
    `systemctl daemon-reload` e habilite o serviço. Instale
    [nginx-staging.conf](./ops/hostinger/nginx-staging.conf) como um site Nginx
    separado e valide/recarregue o Nginx. O proxy usa somente `127.0.0.1:3002`;
    o limite de corpo de 100 MB permite os uploads aceitos pelo aplicativo.
 5. Depois de versionar e enviar as alterações à `main`, abra **Actions →
-   Deploy FeedSync staging to Hostinger VPS → Run workflow** e digite
+   Deploy Arcsync staging to Hostinger VPS → Run workflow** e digite
    `deploy-staging`. Após o primeiro deploy, valide o proxy localmente; então
-   crie no DNS um registro A para `staging.feedsync.focuspulse.site` apontando
+   crie no DNS um registro A para `staging.arcsync.focuspulse.site` apontando
    para o IP da VPS. Quando o DNS resolver, emita o certificado com Certbot e
    habilite o redirecionamento HTTP → HTTPS. A produção permanece no host e
    serviço atuais.
@@ -190,7 +197,7 @@ desconectar.
 
 O TikTok consulta as opções atuais do criador antes de agendar e publicar.
 Configure `TIKTOK_CLIENT_AUDITED=true` somente depois que o app passar pela
-auditoria do TikTok for Developers. Sem auditoria, o FeedSync restringe a
+auditoria do TikTok for Developers. Sem auditoria, o Arcsync restringe a
 privacidade a **Somente você** e limita a cinco contas distintas iniciando
 publicações em qualquer janela de 24 horas. O limite é compartilhado por todas as instâncias
 do app e armazenado no MongoDB. O editor exige escolha manual de privacidade,
@@ -263,13 +270,13 @@ leitura ao calendário e não podem criar ou alterar posts. Um resultado incerto
 de publicação permanece protegido contra retentativa, inclusive no fluxo da equipe.
 
 Convites são links de uso único, válidos por sete dias, e vinculados ao e-mail
-convidado. No MVP o link é copiado e compartilhado manualmente; o FeedSync ainda
+convidado. No MVP o link é copiado e compartilhado manualmente; o Arcsync ainda
 não envia e-mails transacionais.
 
 ## Analytics
 
 A tela **Analytics** resume publicações, agendamentos e falhas registrados pelo
-FeedSync por rede. Ela também consulta visualizações, marcações de gostei e
+Arcsync por rede. Ela também consulta visualizações, marcações de gostei e
 comentários dos vídeos publicados no YouTube, usando a permissão
 `youtube.readonly`; os totais são acumulados, atualizados ao abrir a tela e
 limitados aos 50 vídeos mais recentes publicados pelo app.

@@ -17,8 +17,8 @@ import { canManageWorkspace } from '@/src/libs/workspacePermissions';
 import { hasSocialTokenEncryptionKey } from '@/src/libs/socialTokenCrypto';
 
 export const metadata: Metadata = {
-  title: 'Contas sociais | FeedSync',
-  description: 'Gerencie as contas sociais conectadas ao FeedSync.',
+  title: 'Contas sociais | Arcsync',
+  description: 'Gerencie as contas sociais conectadas ao Arcsync.',
 };
 
 interface AccountsPageProps {

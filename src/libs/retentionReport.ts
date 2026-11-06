@@ -32,7 +32,7 @@ export function assessPostRetention(post: RetentionPost, now: Date) {
 }
 
 export function assessBackupRetention(name: string, modifiedAt: Date, now: Date) {
-  const match = /^feedsync-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z-\d+\.fsbk$/.exec(name);
+  const match = /^arcsync-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z-\d+\.fsbk$/.exec(name);
   if (!match) return { decision: 'preserve', reason: 'unknown_filename' };
   const iso = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}.000Z`;
   const namedAt = new Date(iso);

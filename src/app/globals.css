@@ -134,10 +134,7 @@ button {
   height: auto;
 }
 
-.brand-logo-on-light {
-  display: none;
-}
-
+.brand-logo-on-light,
 :root[data-theme="light"] .brand-logo-on-dark {
   display: none;
 }

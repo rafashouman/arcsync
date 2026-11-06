@@ -55,7 +55,7 @@ Navegador: login com conta fictícia em `feedsync_mvp_browser`, criação e reab
 - Monitoramento atualiza a cada 30 segundos com página visível, além do botão manual.
 - Navegador: upload de PNG fictício apenas no Instagram, salvamento/reabertura com mídia persistida, prévia do destino, exclusão de rascunho e confirmação de auditoria na tela de monitoramento. PNG pode ser guardado como rascunho, mas a validação exige JPG no envio ao Instagram.
 - Integração ampliada: exclusão preserva histórico, remove da consulta ativa e respeita isolamento entre workspaces.
-- Build Docker/Linux com a imagem `feedsync:mvp-check` aprovado. Falha nativa do Turbopack no Windows permanece específica desse ambiente; usar o Dockerfile existente para build de produção. Nenhum deploy foi realizado.
+- Build Docker/Linux com a imagem `arcsync:mvp-check` aprovado. Falha nativa do Turbopack no Windows permanece específica desse ambiente; usar o Dockerfile existente para build de produção. Nenhum deploy foi realizado.
 - Pendentes da homologação externa: credenciais, permissões e publicação real em cada rede/formato, carga e reinício durante upload real. Notificações externas e backup/restauração de produção continuam fora desta etapa local.
 
 Correção adicional verificada: a rota de mídia agora autoriza o workspace ativo além do proprietário legado. A imagem fictícia foi aberta no navegador como PNG 1×1 após a correção (antes retornava 404).
@@ -64,12 +64,12 @@ Correção adicional verificada: a rota de mídia agora autoriza o workspace ati
 ## Preparação adicional — 2 de novembro de 2026
 
 - YouTube: campos próprios persistidos de título, descrição, visibilidade e declarações; padrão privado.
-- TikTok: novos envios por PULL_FROM_URL, URL assinada por 48h e intenção persistida antes de iniciar. Sem confirmação de início, não repete automaticamente. Consulta com publish_id reaproveita a sessão mesmo se a mídia/configuração mudar. A cota não auditada considera a conta TikTok, não o usuário do FeedSync.
+- TikTok: novos envios por PULL_FROM_URL, URL assinada por 48h e intenção persistida antes de iniciar. Sem confirmação de início, não repete automaticamente. Consulta com publish_id reaproveita a sessão mesmo se a mídia/configuração mudar. A cota não auditada considera a conta TikTok, não o usuário do Arcsync.
 - Facebook: OAuth, permissões/tarefas de Página, tokens criptografados, escolha por destino, texto ou foto JPG/PNG, integração à fila e proteção de resultado incerto. Não há Reels/Stories/carrossel Facebook nesta entrega.
 - Páginas públicas: apresentação, privacidade, condições, suporte e solicitação manual de exclusão. Dados reais do responsável/contato ficam para a configuração final.
 - 54 testes automatizados passaram. Integração original passou no banco isolado.
 - `npm run test:providers`: simula OAuth Facebook com filtro de tarefa e recusa sem permissões; testa persistência/execução Facebook e TikTok URL → consulta → resultado; impede retry de resultado incerto. Nenhuma chamada externa real.
-- TypeScript e lint passaram; imagem `feedsync:mvp-check` compilada em Docker/Linux. A limitação do build nativo Windows/Turbopack continua separada.
+- TypeScript e lint passaram; imagem `arcsync:mvp-check` compilada em Docker/Linux. A limitação do build nativo Windows/Turbopack continua separada.
 - Navegador: rascunho Facebook/YouTube salvo e reaberto preservando texto próprio, título/descrição e visibilidade não listado; conferidas páginas públicas e seção Facebook em Contas sociais. Evidência: `tests/fixtures/provider-options-verified.png`. Banco fictício `feedsync_mvp_browser`, não produção.
 - Configuração e publicação real, revisão dos textos públicos, deploy HTTPS, verificação de domínio e aprovações das redes não foram executados. Facebook usa endpoints ainda sujeitos à confirmação na homologação; a consulta automatizada da documentação Meta foi limitada.
 - O npm reportou 16 alertas moderados ao instalar a árvore de dependências do build. Não foi aplicado `audit fix --force`; a avaliação de alcance e atualização de dependências permanece no checklist antes da abertura pública.
@@ -95,7 +95,7 @@ Esta atualização substitui as pendências operacionais das seções anteriores
 - Navegador móvel (390 × 844): editor sem transbordamento horizontal; Tab/Shift+Tab permanecem no diálogo, Escape fecha e devolve foco ao botão Novo post. Essa checagem não representa auditoria completa de acessibilidade.
 - Retenção de histórico por 180 dias e backups por 30 dias preparada como proposta, sujeita à revisão da NexuSync. Expurgo automático de conteúdo e backups não ativado.
 - Permanecem finais: HTTPS, credenciais, instalação das rotinas, teste do alerta/SMTP, submissões e homologação real. Carga local não mede desempenho das APIs reais.
-- Verificação final: configuração Compose validada e imagem Docker/Linux `feedsync:mvp-check` compilada com sucesso incluindo as rotinas operacionais. Nenhum deploy realizado. Evidência móvel: `tests/fixtures/operations-mobile-verified.png`.
+- Verificação final: configuração Compose validada e imagem Docker/Linux `arcsync:mvp-check` compilada com sucesso incluindo as rotinas operacionais. Nenhum deploy realizado. Evidência móvel: `tests/fixtures/operations-mobile-verified.png`.
 
 ## Prévia de retenção — 02/11/2026
 

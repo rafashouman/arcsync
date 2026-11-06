@@ -12,7 +12,7 @@ const errors = checks.filter((check) => check.level === 'error');
 const warnings = checks.filter((check) => check.level === 'warning');
 
 console.log(
-  `FeedSync environment check (${production ? 'production' : 'local/staging'})`,
+  `ArcSync environment check (${production ? 'production' : 'local/staging'})`,
 );
 console.log(
   errors.length === 0

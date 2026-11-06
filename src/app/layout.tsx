@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FeedSync | Planejamento social",
-  description: "Planeje e organize seus posts para Instagram, Facebook, TikTok e YouTube.",
+  title: "Arcsync | Agendamento de publicações",
+  description: "Planeje, organize e agende suas publicações para Instagram, Facebook, TikTok e YouTube com o Arcsync.",
+  applicationName: "Arcsync",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=localStorage.getItem('feedsync-theme')==='light'?'light':'dark'}catch{}" }}/></head>
+      <head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=localStorage.getItem('arcsync-theme')==='light'?'light':'dark'}catch{}" }}/></head>
       <body className="min-h-full flex flex-col"><div className="appearance-bar"><ThemeToggle /></div>{children}</body>
     </html>
   );

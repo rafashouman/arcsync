@@ -9,7 +9,7 @@ import { buildRetentionReport } from './retention-report.mjs';
 const client = new MongoClient('mongodb://127.0.0.1:27119/feedsync_mvp_retention');
 const workspace = `retention-${randomUUID()}`;
 const otherWorkspace = `other-${randomUUID()}`;
-const directory = await mkdtemp(join(tmpdir(), 'feedsync-retention-'));
+const directory = await mkdtemp(join(tmpdir(), 'arcsync-retention-'));
 const now = new Date('2026-11-02T12:00:00Z');
 const old = new Date('2026-01-01T12:00:00Z');
 const ids = Array.from({ length: 4 }, () => new ObjectId());
@@ -25,7 +25,7 @@ try {
     { ...base, _id: ids[3], workspaceId: otherWorkspace, mediaUrls: [], destinations: [{ mediaUrls: [sharedMedia] }] },
   ]);
   const before = await db.collection('posts').find({ _id: { $in: ids } }).sort({ _id: 1 }).toArray();
-  for (const [name, at] of [['feedsync-20260101T120000Z-1.fsbk', old], ['feedsync-20260201T120000Z-2.fsbk', new Date('2026-02-01T12:00:00Z')]] as const) {
+  for (const [name, at] of [['arcsync-20260101T120000Z-1.fsbk', old], ['arcsync-20260201T120000Z-2.fsbk', new Date('2026-02-01T12:00:00Z')]] as const) {
     const file = join(directory, name);
     await writeFile(file, 'fixture only');
     await utimes(file, at, at);

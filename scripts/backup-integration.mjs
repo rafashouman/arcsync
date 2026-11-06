@@ -6,10 +6,10 @@ import path from 'node:path';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {MongoClient} from 'mongodb';
 import {encryptArchive,decryptArchive} from '../ops/archive-crypto.mjs';
-const directory=await mkdtemp(path.join(tmpdir(),'feedsync-restore-'));
+const directory=await mkdtemp(path.join(tmpdir(),'arcsync-restore-'));
 const id=randomUUID().replaceAll('-','');
 const database=`feedsync_backup_test_${id}`;
-const container=`feedsync-restore-test-${id}`;
+const container=`arcsync-restore-test-${id}`;
 const archive=`/tmp/${database}.archive.gz`;
 const client=new MongoClient('mongodb://127.0.0.1:27119');
 let created=false;
@@ -21,8 +21,8 @@ try {
  await mkdir(path.join(directory,'snapshot'));await mkdir(path.join(directory,'media'));
  await writeFile(path.join(directory,'media','fixture.txt'),'independent-media-fixture');
  await writeFile(path.join(directory,'snapshot','environment.env'),'SOCIAL_TOKEN_ENCRYPTION_KEY=fake-test-value\nPUBLISHING_ENABLED=false\n');
- docker('exec','feedsync-mvp-test','mongodump',`--db=${database}`,`--archive=${archive}`,'--gzip');
- docker('cp',`feedsync-mvp-test:${archive}`,path.join(directory,'snapshot','mongo.archive.gz'));
+ docker('exec','arcsync-mvp-test','mongodump',`--db=${database}`,`--archive=${archive}`,'--gzip');
+ docker('cp',`arcsync-mvp-test:${archive}`,path.join(directory,'snapshot','mongo.archive.gz'));
  execFileSync('tar',['-czf',path.join(directory,'snapshot','uploads.tar.gz'),'-C',path.join(directory,'media'),'.']);
  await writeFile(path.join(directory,'snapshot','manifest.json'),JSON.stringify({format:1}));
  execFileSync('tar',['-cf',path.join(directory,'snapshot.tar'),'-C',path.join(directory,'snapshot'),'.']);
@@ -43,7 +43,7 @@ try {
 } finally {
  if(created) docker('rm','-f',container);
  await client.db(database).dropDatabase().catch(()=>{});await client.close();
- docker('exec','feedsync-mvp-test','rm','-f',archive);
+ docker('exec','arcsync-mvp-test','rm','-f',archive);
  // Only this mkdtemp-created directory contains disposable test data.
  await rm(directory,{recursive:true,force:true});
 }

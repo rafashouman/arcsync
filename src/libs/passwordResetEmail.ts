@@ -45,14 +45,14 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   await transporter.sendMail({
     from: smtp.from,
     to: email,
-    subject: 'Redefina sua senha do FeedSync',
+    subject: 'Redefina sua senha do Arcsync',
     text: [
-      'Recebemos uma solicitação para redefinir sua senha do FeedSync.',
+      'Recebemos uma solicitação para redefinir sua senha do Arcsync.',
       `Use este link em até uma hora: ${resetUrl}`,
       'Se você não solicitou a redefinição, ignore este e-mail.',
     ].join('\n\n'),
     html: [
-      '<p>Recebemos uma solicitação para redefinir sua senha do FeedSync.</p>',
+      '<p>Recebemos uma solicitação para redefinir sua senha do Arcsync.</p>',
       `<p><a href="${safeUrl}">Redefinir senha</a></p>`,
       '<p>O link expira em uma hora. Se você não solicitou a redefinição, ignore este e-mail.</p>',
     ].join(''),

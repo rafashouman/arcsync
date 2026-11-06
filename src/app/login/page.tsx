@@ -5,8 +5,8 @@ import AuthForm from '@/src/components/AuthForm';
 import BrandLogo from '@/src/components/BrandLogo';
 
 export const metadata: Metadata = {
-  title: 'Entrar | FeedSync',
-  description: 'Entre ou crie sua conta FeedSync.',
+  title: 'Entrar | Arcsync',
+  description: 'Entre ou crie sua conta Arcsync.',
 };
 
 interface LoginPageProps {
@@ -22,10 +22,10 @@ async function LoginContent({
     /^\/(?!\/)/.test(next) &&
     !next.includes('\\') &&
     !/[\u0000-\u001f]/.test(next)
-      ? new URL(next, 'https://feedsync.invalid')
+      ? new URL(next, 'https://arcsync.invalid')
       : null;
   const redirectTo =
-    candidate?.origin === 'https://feedsync.invalid'
+    candidate?.origin === 'https://arcsync.invalid'
       ? `${candidate.pathname}${candidate.search}${candidate.hash}`
       : '/';
 
@@ -33,7 +33,7 @@ async function LoginContent({
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-7 flex items-center justify-center gap-3">
-          <Link href="/" aria-label="FeedSync — início"><BrandLogo large /></Link>
+          <Link href="/" aria-label="Arcsync — início"><BrandLogo large /></Link>
         </div>
         <AuthForm redirectTo={redirectTo} />
         <nav className="mt-5 flex flex-wrap justify-center gap-4 text-xs text-slate-400" aria-label="Informações públicas"><Link href="/about">Sobre</Link><Link href="/privacy">Privacidade</Link><Link href="/terms">Termos</Link><Link href="/support">Suporte</Link></nav>

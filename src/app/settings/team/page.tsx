@@ -15,8 +15,8 @@ import { getCurrentUser } from '@/src/libs/authSession';
 import { canManageWorkspace } from '@/src/libs/workspacePermissions';
 
 export const metadata: Metadata = {
-  title: 'Equipe | FeedSync',
-  description: 'Gerencie os membros e papéis do seu workspace FeedSync.',
+  title: 'Equipe | Arcsync',
+  description: 'Gerencie os membros e papéis do seu workspace Arcsync.',
 };
 
 async function TeamContent() {

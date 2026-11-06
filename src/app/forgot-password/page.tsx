@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import ForgotPasswordForm from '@/src/components/ForgotPasswordForm';
 
 export const metadata: Metadata = {
-  title: 'Recuperar senha | FeedSync',
-  description: 'Solicite um link seguro para redefinir sua senha do FeedSync.',
+  title: 'Recuperar senha | Arcsync',
+  description: 'Solicite um link seguro para redefinir sua senha do Arcsync.',
 };
 
 export default function ForgotPasswordPage() {

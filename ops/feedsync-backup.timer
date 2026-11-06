@@ -1,11 +1,11 @@
 [Unit]
-Description=Daily FeedSync backup
+Description=Daily ArcSync backup
 
 [Timer]
 OnCalendar=*-*-* 03:00:00
 RandomizedDelaySec=5min
 Persistent=true
-Unit=feedsync-backup.service
+Unit=arcsync-backup.service
 
 [Install]
 WantedBy=timers.target

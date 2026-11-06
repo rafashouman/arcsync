@@ -14,8 +14,8 @@ import {
 import type { PostRecord, SocialPlatform } from '@/src/types/post';
 
 export const metadata: Metadata = {
-  title: 'Analytics | FeedSync',
-  description: 'Acompanhe publicações e métricas disponíveis no FeedSync.',
+  title: 'Analytics | Arcsync',
+  description: 'Acompanhe publicações e métricas disponíveis no Arcsync.',
 };
 
 const platforms: {
@@ -97,7 +97,7 @@ function PlatformActivity({
         </div>
       </dl>
       <p className="mt-4 border-t border-white/[0.06] pt-3 text-xs leading-5 text-slate-500">
-        Contagem das publicações registradas pelo FeedSync; não representa alcance
+        Contagem das publicações registradas pelo Arcsync; não representa alcance
         ou engajamento.
       </p>
     </article>
@@ -133,8 +133,8 @@ function YouTubePerformance({ analytics }: { analytics: YouTubeAnalyticsResult }
           <h2 className="font-semibold text-white">YouTube · métricas nativas</h2>
           <p className="mt-1 text-xs text-slate-500">
             {analytics.trackedVideoCount === 0
-              ? 'Nenhum vídeo publicado pelo FeedSync para consultar.'
-              : `Dados atuais de ${totals.videoCount} de até ${analytics.trackedVideoCount} vídeos do FeedSync.`}
+              ? 'Nenhum vídeo publicado pelo Arcsync para consultar.'
+              : `Dados atuais de ${totals.videoCount} de até ${analytics.trackedVideoCount} vídeos do Arcsync.`}
           </p>
         </div>
         <BarChart3 size={18} className="text-red-200" />
@@ -250,7 +250,7 @@ async function AnalyticsContent() {
             </h2>
             <p className="mt-1 text-xs leading-5 text-slate-500">
               Os dados são limitados às permissões aprovadas para cada API; o
-              FeedSync não estima métricas ausentes.
+              Arcsync não estima métricas ausentes.
             </p>
           </div>
           <YouTubePerformance analytics={youtubeAnalytics} />

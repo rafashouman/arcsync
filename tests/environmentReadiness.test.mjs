@@ -4,7 +4,7 @@ import { checkEnvironmentReadiness } from '../src/libs/environmentReadiness.ts';
 
 function validEnvironment(overrides = {}) {
   return {
-    MONGODB_URI: 'mongodb://localhost:27017/feedsync',
+    MONGODB_URI: 'mongodb://localhost:27017/arcsync',
     PUBLIC_APP_URL: 'http://localhost:3000',
     MEDIA_URL_SIGNING_KEY: `${'A'.repeat(43)}=`,
     SOCIAL_TOKEN_ENCRYPTION_KEY: `${'B'.repeat(43)}=`,
@@ -13,7 +13,7 @@ function validEnvironment(overrides = {}) {
     SMTP_PORT: '587',
     SMTP_USER: 'mailer@example.com',
     SMTP_PASSWORD: 'do-not-print-this-password',
-    SMTP_FROM: 'FeedSync <mailer@example.com>',
+    SMTP_FROM: 'ArcSync <mailer@example.com>',
     NODE_ENV: 'development',
     ...overrides,
   };
@@ -45,7 +45,7 @@ test('requires HTTPS and complete secrets for production', () => {
   assert.equal(
     checkEnvironmentReadiness(
       validEnvironment({
-        PUBLIC_APP_URL: 'https://feedsync.example',
+        PUBLIC_APP_URL: 'https://arcsync.example',
         NODE_ENV: 'production',
       }),
       true,
@@ -75,7 +75,7 @@ test('rejects invalid OAuth callback URLs and production HTTP callbacks', () => 
     validEnvironment({
       INSTAGRAM_APP_ID: 'id',
       INSTAGRAM_APP_SECRET: 'secret',
-      INSTAGRAM_REDIRECT_URI: 'https://feedsync.example/wrong',
+      INSTAGRAM_REDIRECT_URI: 'https://arcsync.example/wrong',
     }),
     true,
   );
@@ -95,7 +95,7 @@ test('rejects invalid OAuth callback URLs and production HTTP callbacks', () => 
 test('requires an absolute upload path in production and warns about local storage', () => {
   const checks = checkEnvironmentReadiness(
     validEnvironment({
-      PUBLIC_APP_URL: 'https://feedsync.example',
+      PUBLIC_APP_URL: 'https://arcsync.example',
       NODE_ENV: 'production',
       FEEDSYNC_UPLOADS_DIR: './relative-uploads',
     }),

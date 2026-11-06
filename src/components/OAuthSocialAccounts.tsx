@@ -51,14 +51,14 @@ const statusMessages: Record<string, { tone: 'success' | 'error' | 'info'; text:
   'youtube-permission-required': { tone: 'error', text: 'O Google não concedeu a permissão necessária para enviar vídeos.' },
   'tiktok-connection-error': { tone: 'error', text: 'Não foi possível conectar ao TikTok. Confira a configuração do app e tente novamente.' },
   'youtube-connection-error': { tone: 'error', text: 'Não foi possível conectar ao YouTube. Confira a configuração do app e tente novamente.' },
-  'tiktok-disconnected': { tone: 'success', text: 'Conta TikTok desconectada do FeedSync.' },
-  'youtube-disconnected': { tone: 'success', text: 'Conta YouTube desconectada do FeedSync.' },
+  'tiktok-disconnected': { tone: 'success', text: 'Conta TikTok desconectada do Arcsync.' },
+  'youtube-disconnected': { tone: 'success', text: 'Conta YouTube desconectada do Arcsync.' },
   'tiktok-token-refreshed': { tone: 'success', text: 'Token do TikTok renovado.' },
   'youtube-token-refreshed': { tone: 'success', text: 'Token do YouTube renovado.' },
   'tiktok-default-updated': { tone: 'success', text: 'Conta padrão do TikTok atualizada.' },
   'youtube-default-updated': { tone: 'success', text: 'Conta padrão do YouTube atualizada.' },
-  'tiktok-account-not-found': { tone: 'error', text: 'A conta TikTok não foi encontrada nesta conta FeedSync.' },
-  'youtube-account-not-found': { tone: 'error', text: 'A conta YouTube não foi encontrada nesta conta FeedSync.' },
+  'tiktok-account-not-found': { tone: 'error', text: 'A conta TikTok não foi encontrada nesta conta Arcsync.' },
+  'youtube-account-not-found': { tone: 'error', text: 'A conta YouTube não foi encontrada nesta conta Arcsync.' },
   'tiktok-disconnect-error': { tone: 'error', text: 'Não foi possível desconectar a conta TikTok.' },
   'youtube-disconnect-error': { tone: 'error', text: 'Não foi possível desconectar a conta YouTube.' },
   'tiktok-refresh-error': { tone: 'error', text: 'Não foi possível renovar o token do TikTok. Reconecte a conta se persistir.' },
@@ -84,7 +84,7 @@ export default function OAuthSocialAccounts({
   configured: Record<OAuthPlatform, boolean>;
   canManageAccounts: boolean;
 }) {
-  const message = status ? statusMessages[status] ?? (status.startsWith('facebook-') ? {tone: status === 'facebook-connected' || status === 'facebook-disconnected' || status === 'facebook-default-updated' ? 'success' : 'error', text: status === 'facebook-connected' ? 'Páginas autorizadas conectadas. Selecione a Página de destino em cada post.' : status === 'facebook-disconnected' ? 'Página desconectada do FeedSync. Para revogar o acesso na Meta, remova o app nas integrações comerciais do Facebook.' : status === 'facebook-default-updated' ? 'Página padrão atualizada.' : 'Conexão Facebook não concluída. Confira permissões e configuração e reconecte a Página.'} : undefined) : undefined;
+  const message = status ? statusMessages[status] ?? (status.startsWith('facebook-') ? {tone: status === 'facebook-connected' || status === 'facebook-disconnected' || status === 'facebook-default-updated' ? 'success' : 'error', text: status === 'facebook-connected' ? 'Páginas autorizadas conectadas. Selecione a Página de destino em cada post.' : status === 'facebook-disconnected' ? 'Página desconectada do Arcsync. Para revogar o acesso na Meta, remova o app nas integrações comerciais do Facebook.' : status === 'facebook-default-updated' ? 'Página padrão atualizada.' : 'Conexão Facebook não concluída. Confira permissões e configuração e reconecte a Página.'} : undefined) : undefined;
 
   return (
     <section className="space-y-5">
@@ -124,7 +124,7 @@ export default function OAuthSocialAccounts({
                 <div>
                   <h2 className="font-semibold text-white">{label}</h2>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Conecte sua conta para autorizar o FeedSync a preparar publicações.
+                    Conecte sua conta para autorizar o Arcsync a preparar publicações.
                   </p>
                 </div>
               </div>

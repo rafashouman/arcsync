@@ -235,7 +235,7 @@ Isso disponibiliza, por exemplo, `bg-app-background`, `bg-app-surface`,
 O tema pode trocar os valores dos tokens sem mudar as utilities dos
 componentes.
 
-No FeedSync, a seleção do tema é aplicada ao elemento `<html>` por
+No Arcsync, a seleção do tema é aplicada ao elemento `<html>` por
 `data-theme`, e a escolha fica guardada no navegador. A folha atual usa
 principalmente variáveis CSS e regras de compatibilidade para componentes que
 ainda têm cores fixas. Para novas telas, prefira utilities semânticas ou
@@ -244,7 +244,7 @@ escuras fixas que precisem de correção no tema claro.
 
 > A variante Tailwind `dark:` usa `prefers-color-scheme` por padrão. Para
 > controlá-la manualmente com um seletor próprio, é necessário configurar
-> `@custom-variant dark` no CSS. Como o FeedSync usa `data-theme="light"` para
+> `@custom-variant dark` no CSS. Como o Arcsync usa `data-theme="light"` para
 > ativar o claro e não depende de `dark:*`, mantenha o padrão atual ou configure
 > explicitamente a variante antes de introduzir essas classes.
 

@@ -30,10 +30,10 @@ test('active, failed, incomplete and unreliable legacy records are preserved', (
 });
 
 test('backup proposal requires both filename and modification age; invalid dates stay protected', () => {
-  const name = 'feedsync-20260901T120000Z-123.fsbk';
+  const name = 'arcsync-20260901T120000Z-123.fsbk';
   assert.equal(assessBackupRetention(name, daysAgo(31), now).decision, 'review_candidate');
   assert.equal(assessBackupRetention(name, daysAgo(29), now).decision, 'preserve');
-  for (const filename of ['unknown.fsbk', 'feedsync-20260230T120000Z-1.fsbk', 'feedsync-20261201T120000Z-1.fsbk']) {
+  for (const filename of ['unknown.fsbk', 'arcsync-20260230T120000Z-1.fsbk', 'arcsync-20261201T120000Z-1.fsbk']) {
     assert.equal(assessBackupRetention(filename, daysAgo(100), now).decision, 'preserve');
   }
 });

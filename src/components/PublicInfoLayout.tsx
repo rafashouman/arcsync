@@ -13,7 +13,7 @@ async function PublicInfoContent({title, children}: {title:string; children:Reac
   const contact = process.env.SUPPORT_EMAIL?.trim();
   const validContact = contact && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(contact);
   return <main className="mx-auto w-full max-w-3xl space-y-6 px-6 py-12 text-slate-200">
-    <Link href="/about" aria-label="Sobre o FeedSync"><BrandLogo /></Link>
+    <Link href="/about" aria-label="Sobre o Arcsync"><BrandLogo /></Link>
     <h1 className="text-3xl font-semibold">{title}</h1>
     {(!operator || !validContact) && <p role="status" className="rounded border border-amber-300/30 p-3 text-sm text-amber-200">Ambiente de preparação. Os dados do responsável e o contato de suporte precisam ser preenchidos antes da abertura ao público.</p>}
     <div className="space-y-5 leading-7">{children}</div>

@@ -1,2 +1,2 @@
-%feedsync-staging-deploy ALL=(root) NOPASSWD: /usr/bin/systemctl cat feedsync-staging, /usr/bin/systemctl restart feedsync-staging, /usr/bin/systemctl stop feedsync-staging
-%feedsync-staging-deploy ALL=(feedsync-staging) NOPASSWD: /usr/bin/test -w /opt/feedsync-staging/shared/uploads
+%arcsync-staging-deploy ALL=(root) NOPASSWD: /usr/bin/systemctl cat arcsync-staging, /usr/bin/systemctl restart arcsync-staging, /usr/bin/systemctl stop arcsync-staging
+%arcsync-staging-deploy ALL=(arcsync-staging) NOPASSWD: /usr/bin/test -w /opt/arcsync-staging/shared/uploads

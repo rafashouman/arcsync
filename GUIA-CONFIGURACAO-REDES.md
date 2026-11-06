@@ -1,11 +1,11 @@
-# FeedSync — tutorial de configuração das redes sociais
+# Arcsync — tutorial de configuração das redes sociais
 
 Revisão: 3 de novembro de 2026. Este guia prepara a configuração; não altera credenciais nem publica conteúdo. Nomes dos menus podem mudar. Requisitos devem ser confirmados no painel do aplicativo antes de submetê-lo.
 
 ## 1. O que você precisa reunir
 
 - Domínio/subdomínio HTTPS definitivo para homologação e, depois, produção.
-- E-mail de suporte, nome/logo/descrição do FeedSync, URLs públicas de privacidade, termos e instruções de exclusão.
+- E-mail de suporte, nome/logo/descrição do Arcsync, URLs públicas de privacidade, termos e instruções de exclusão.
 - Acesso administrativo ao servidor e ao DNS.
 - Conta Google com canal YouTube de teste.
 - Conta TikTok de teste e acesso ao TikTok for Developers.
@@ -66,7 +66,7 @@ Valide `npm run check:env -- --production` no ambiente configurado. Esse comando
 
 ## 3. YouTube — configuração
 
-1. Abra [Google Cloud Console](https://console.cloud.google.com/) e crie/selecione o projeto do FeedSync.
+1. Abra [Google Cloud Console](https://console.cloud.google.com/) e crie/selecione o projeto do Arcsync.
 2. Em APIs e serviços, habilite **YouTube Data API v3**.
 3. Configure o Google Auth Platform/tela de consentimento: nome, contato, domínio e páginas públicas. Escolha a audiência compatível com seu produto. Durante testes externos, adicione os e-mails autorizados como usuários de teste.
 4. Cadastre um cliente OAuth do tipo **Aplicativo da Web**. Em URIs de redirecionamento autorizadas, adicione exatamente:
@@ -79,19 +79,19 @@ YOUTUBE_CLIENT_SECRET=<client-secret-do-google>
 YOUTUBE_REDIRECT_URI=https://app.seu-dominio.com/api/social/youtube/callback
 ```
 
-6. Reinicie o FeedSync. Abra **Contas sociais → YouTube → Conectar**, entre com a conta do canal de teste e confira qual canal foi autorizado.
+6. Reinicie o Arcsync. Abra **Contas sociais → YouTube → Conectar**, entre com a conta do canal de teste e confira qual canal foi autorizado.
 7. O código solicita `https://www.googleapis.com/auth/youtube.upload` e `https://www.googleapis.com/auth/youtube.readonly`. Autorize ambos; a segunda permissão é usada para dados do canal/métricas. Para disponibilizar a clientes, siga a verificação OAuth exigida pelo Google para esses acessos. [Escopos oficiais](https://developers.google.com/youtube/v3/guides/auth/client-side-web-apps)
 8. Crie um destino YouTube e envie um vídeo pequeno de teste. O limite local atual é 95 MB por envio; não confunda isso com o limite maior da API.
 
 No destino YouTube, ative **Personalizar configurações do YouTube** para definir título, descrição, público/não listado/privado e declarações de conteúdo infantil e sintético. Sem personalização, usa a legenda e envia como **privado**. Shorts não é um parâmetro dedicado do conector. [Campos oficiais](https://developers.google.com/youtube/data/reference/rest/v3/videos)
 
-**Conexão que expira:** em projeto OAuth externo com status Testing, refresh tokens para esses escopos expiram em sete dias. Isso não equivale a um bug de renovação do FeedSync. Para operação contínua, conclua a configuração de produção e verificação aplicável. [OAuth do Google](https://developers.google.com/identity/protocols/oauth2)
+**Conexão que expira:** em projeto OAuth externo com status Testing, refresh tokens para esses escopos expiram em sete dias. Isso não equivale a um bug de renovação do Arcsync. Para operação contínua, conclua a configuração de produção e verificação aplicável. [OAuth do Google](https://developers.google.com/identity/protocols/oauth2)
 
 A referência atual de `videos.insert` consultada não impõe mais a antiga restrição universal de privado para projetos não verificados. Confira a privacidade efetiva do vídeo e as cotas no projeto; não baseie a homologação em tutoriais antigos que pressupõem essa restrição. [Referência atual de upload](https://developers.google.com/youtube/data/reference/rest/v3/videos/insert)
 
 ## 4. TikTok — configuração
 
-1. Acesse [TikTok for Developers](https://developers.tiktok.com/) e registre o aplicativo web do FeedSync.
+1. Acesse [TikTok for Developers](https://developers.tiktok.com/) e registre o aplicativo web do Arcsync.
 2. Preencha nome, descrição, ícone, site, privacidade e termos. Verifique a propriedade das URLs solicitadas pelo painel, por DNS ou arquivo conforme as instruções fornecidas. [Cadastro oficial](https://developers.tiktok.com/docs/en/getting-started-create-an-app)
 3. Configure Login Kit e Content Posting API. Habilite **Direct Post**; o fluxo de enviar conteúdo para a caixa de entrada do TikTok é diferente.
 4. Solicite os escopos usados pelo código: `user.info.basic` e `video.publish`. A disponibilidade de `video.publish` depende da aprovação do aplicativo e do consentimento da conta.
@@ -106,7 +106,7 @@ TIKTOK_REDIRECT_URI=https://app.seu-dominio.com/api/social/tiktok/callback
 TIKTOK_CLIENT_AUDITED=false
 ```
 
-7. Cadastre as contas de teste conforme o modo disponibilizado no painel; depois conecte pelo FeedSync.
+7. Cadastre as contas de teste conforme o modo disponibilizado no painel; depois conecte pelo Arcsync.
 8. No editor, confira nome da conta, privacidade, duração permitida, interações e consentimentos. Teste a conclusão no TikTok, não apenas o recebimento do upload. [Direct Post](https://developers.tiktok.com/docs/en/content-posting-api-get-started)
 
 **Antes da auditoria:** as diretrizes atuais restringem clientes não auditados a até cinco usuários em 24 horas, contas privadas e visibilidade `SELF_ONLY`. O produto deve atender uma audiência real; uma ferramenta exclusivamente interna para as contas do próprio time é indicada como uso não aceito. Isso pode afetar a aprovação e não se resolve com um secret. [Diretrizes oficiais](https://developers.tiktok.com/docs/en/content-sharing-guidelines)
@@ -117,7 +117,7 @@ Só altere `TIKTOK_CLIENT_AUDITED=true` depois de aprovação real da auditoria.
 
 ## 5. Instagram — configuração
 
-O FeedSync usa **Instagram API with Instagram Login**, com callback que contém `meta`. Não selecione automaticamente o fluxo “Instagram with Facebook Login”: ele tem permissões e dependências diferentes.
+O Arcsync usa **Instagram API with Instagram Login**, com callback que contém `meta`. Não selecione automaticamente o fluxo “Instagram with Facebook Login”: ele tem permissões e dependências diferentes.
 
 1. Abra [Meta for Developers](https://developers.facebook.com/) e crie/selecione um app com o caso de uso/produto Instagram e publicação de conteúdo.
 2. Use uma conta Instagram profissional. Para a primeira homologação de Stories, prepare uma conta Business e confirme no painel/documentação a elegibilidade para o fluxo escolhido; não prometa Stories para todo tipo de conta.
@@ -157,10 +157,10 @@ FACEBOOK_REDIRECT_URI=https://app.seu-dominio.com/api/social/facebook/callback
 FACEBOOK_GRAPH_API_VERSION=v26.0
 ```
 
-5. Reinicie e use **Contas sociais → Facebook Páginas → Conectar**. Na autorização Meta, escolha as Páginas que deseja disponibilizar à equipe. O FeedSync armazena as Páginas concedidas com tarefa de criar conteúdo/gerenciar. Em cada post, selecione explicitamente a Página de destino.
+5. Reinicie e use **Contas sociais → Facebook Páginas → Conectar**. Na autorização Meta, escolha as Páginas que deseja disponibilizar à equipe. O Arcsync armazena as Páginas concedidas com tarefa de criar conteúdo/gerenciar. Em cada post, selecione explicitamente a Página de destino.
 6. Tokens de Página ficam criptografados. A validade da autorização do usuário não é usada como prazo do token da Página; o Facebook valida o token ao publicar. Se a Meta recusar a autorização, reconecte a Página. Não há refresh token de Facebook.
-7. Teste texto e depois uma foto JPG/PNG. O agendamento ocorre na fila do FeedSync: o cron envia ao Facebook no horário escolhido. A primeira versão não fornece campo específico de prévia de link, vídeos ou múltiplas fotos.
-8. Para atender clientes externos, conclua revisão, acessos e verificação empresarial pedidos pelo painel. Remover a Página do FeedSync remove a conexão local; para revogar o app na Meta, remova-o também nas integrações comerciais do Facebook.
+7. Teste texto e depois uma foto JPG/PNG. O agendamento ocorre na fila do Arcsync: o cron envia ao Facebook no horário escolhido. A primeira versão não fornece campo específico de prévia de link, vídeos ou múltiplas fotos.
+8. Para atender clientes externos, conclua revisão, acessos e verificação empresarial pedidos pelo painel. Remover a Página do Arcsync remove a conexão local; para revogar o app na Meta, remova-o também nas integrações comerciais do Facebook.
 
 [Referência de publicação em Páginas](https://developers.facebook.com/docs/pages-api/posts/). A leitura automatizada dessa referência retornou limite de acesso. Os endpoints e permissões implementados devem ser confirmados no painel e na homologação real; os testes locais usam respostas simuladas, não certificam compatibilidade externa.
 
@@ -211,8 +211,8 @@ Preparar um `.env` de interpolação do Compose, separado do arquivo de segredos
 
 ```dotenv
 FEEDSYNC_IMAGE_TAG=homologacao
-FEEDSYNC_ENV_FILE=/etc/feedsync/homologacao.env
-FEEDSYNC_UPLOADS_HOST_DIR=/var/lib/feedsync/uploads
+FEEDSYNC_ENV_FILE=/etc/arcsync/homologacao.env
+FEEDSYNC_UPLOADS_HOST_DIR=/var/lib/arcsync/uploads
 FEEDSYNC_PORT=3000
 FEEDSYNC_UID=1000
 FEEDSYNC_GID=1000
@@ -245,7 +245,7 @@ A fila pode executar imediatamente. Não fazer essa liberação com posts vencid
 
 ## 12. Conferência das fontes em 03/11/2026
 
-- Google: conferidas [referência de upload](https://developers.google.com/youtube/data/reference/rest/v3/videos/insert) e [OAuth](https://developers.google.com/identity/protocols/oauth2). Mantidos os dois escopos do código e envio privado por padrão do FeedSync; isso é diferente do padrão da API.
+- Google: conferidas [referência de upload](https://developers.google.com/youtube/data/reference/rest/v3/videos/insert) e [OAuth](https://developers.google.com/identity/protocols/oauth2). Mantidos os dois escopos do código e envio privado por padrão do Arcsync; isso é diferente do padrão da API.
 - TikTok: conferidas [diretrizes de compartilhamento](https://developers.tiktok.com/docs/en/content-sharing-guidelines) e [transferência de mídia](https://developers.tiktok.com/docs/en/content-posting-api-media-transfer-guide). Mantidas auditoria, restrições não auditadas e verificação de propriedade para PULL_FROM_URL.
 - Meta: referências de Instagram Login e Facebook Pages retornaram HTTP 429. Callbacks, escopos e versão v26.0 foram comparados com o código; disponibilidade, acessos e elegibilidade devem ser confirmados no painel. Não considerar essa parte uma validação externa concluída.
 

@@ -26,7 +26,7 @@ Antes de ativar expurgo: aprovar a política, implementar modo de relatório, va
 4. Definir eventuais exceções e informar o alcance ao solicitante. Não inventar prazo de resposta automático: a NexuSync deve estabelecer e acompanhar esse prazo antes da abertura pública.
 5. Executar procedimento validado e restrito ao escopo confirmado; registrar conclusão sem conservar os próprios dados removidos no protocolo.
 6. Quando houver restauração de backup, reaplicar pedidos de exclusão posteriores à data da cópia antes de reabrir o ambiente. Preservar um registro mínimo protegido desses pedidos para esse fim.
-7. Explicar que posts já publicados nas redes e os dados mantidos por elas têm procedimento separado. Não afirmar que apagar no FeedSync remove o conteúdo externo.
+7. Explicar que posts já publicados nas redes e os dados mantidos por elas têm procedimento separado. Não afirmar que apagar no Arcsync remove o conteúdo externo.
 
 ## Inventário de fornecedores a concluir antes da abertura
 

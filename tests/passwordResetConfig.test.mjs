@@ -15,14 +15,14 @@ test('requires complete and valid SMTP settings', () => {
       SMTP_PORT: '587',
       SMTP_USER: 'mailer@example.com',
       SMTP_PASSWORD: 'secret',
-      SMTP_FROM: 'FeedSync <mailer@example.com>',
+      SMTP_FROM: 'ArcSync <mailer@example.com>',
     }),
     {
       host: 'smtp.example.com',
       port: 587,
       user: 'mailer@example.com',
       password: 'secret',
-      from: 'FeedSync <mailer@example.com>',
+      from: 'ArcSync <mailer@example.com>',
     },
   );
   assert.equal(
@@ -60,10 +60,10 @@ test('requires complete and valid SMTP settings', () => {
 test('builds reset links only for secure public origins and local development', () => {
   assert.equal(
     getPasswordResetUrl(token, {
-      PUBLIC_APP_URL: 'https://feedsync.example/app',
+      PUBLIC_APP_URL: 'https://arcsync.example/app',
       NODE_ENV: 'production',
     }),
-    `https://feedsync.example/reset-password?token=${token}`,
+    `https://arcsync.example/reset-password?token=${token}`,
   );
   assert.equal(
     getPasswordResetUrl(token, {
@@ -74,14 +74,14 @@ test('builds reset links only for secure public origins and local development', 
   );
   assert.equal(
     getPasswordResetUrl(token, {
-      PUBLIC_APP_URL: 'http://feedsync.example',
+      PUBLIC_APP_URL: 'http://arcsync.example',
       NODE_ENV: 'production',
     }),
     null,
   );
   assert.equal(
     getPasswordResetUrl('invalid', {
-      PUBLIC_APP_URL: 'https://feedsync.example',
+      PUBLIC_APP_URL: 'https://arcsync.example',
       NODE_ENV: 'production',
     }),
     null,

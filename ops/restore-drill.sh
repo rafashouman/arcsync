@@ -19,7 +19,7 @@ tar -tvzf "$OUTPUT/uploads.tar.gz" > "$OUTPUT/media-types.txt"
 if grep -Eq '(^/|(^|/)\.\.(/|$))' "$OUTPUT/media-files.txt" || grep -Eq '^[lh]' "$OUTPUT/media-types.txt"; then echo 'Caminho ou link de mídia inválido.' >&2;exit 1;fi
 mkdir "$OUTPUT/uploads"
 tar --no-same-owner --no-same-permissions -xzf "$OUTPUT/uploads.tar.gz" -C "$OUTPUT/uploads"
-CONTAINER="feedsync-restore-drill-$(date +%s)-${RANDOM}"
+CONTAINER="arcsync-restore-drill-$(date +%s)-${RANDOM}"
 docker run -d --name "$CONTAINER" --network none --mount "type=bind,source=$OUTPUT,target=/restore,readonly" mongo:8.0 >/dev/null
 trap 'docker stop "$CONTAINER" >/dev/null || true' EXIT
 for attempt in {1..30}; do

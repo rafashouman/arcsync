@@ -2,10 +2,10 @@
 set -Eeuo pipefail
 umask 0027
 
-ROOT=/opt/feedsync-staging
+ROOT=/opt/arcsync-staging
 SHARED="$ROOT/shared"
 RELEASES="$ROOT/releases"
-SERVICE=feedsync-staging
+SERVICE=arcsync-staging
 PORT=3002
 
 SHA="${1:-}"
@@ -35,8 +35,8 @@ if ! sudo -n systemctl cat "$SERVICE" >/dev/null 2>&1; then
   echo "Install and enable the $SERVICE systemd unit before deploying." >&2
   exit 1
 fi
-if ! sudo -n -u feedsync-staging /usr/bin/test -w "$SHARED/uploads"; then
-  echo "The feedsync-staging service user must be able to write to $SHARED/uploads." >&2
+if ! sudo -n -u arcsync-staging /usr/bin/test -w "$SHARED/uploads"; then
+  echo "The arcsync-staging service user must be able to write to $SHARED/uploads." >&2
   exit 1
 fi
 
@@ -45,8 +45,8 @@ FEEDSYNC_IMAGE_TAG=$SHA
 FEEDSYNC_ENV_FILE=$SHARED/.env.production
 FEEDSYNC_UPLOADS_HOST_DIR=$SHARED/uploads
 FEEDSYNC_PORT=$PORT
-FEEDSYNC_UID=$(id -u feedsync-staging)
-FEEDSYNC_GID=$(id -g feedsync-staging)
+FEEDSYNC_UID=$(id -u arcsync-staging)
+FEEDSYNC_GID=$(id -g arcsync-staging)
 EOF
 chmod 0640 "$RELEASE/.env"
 

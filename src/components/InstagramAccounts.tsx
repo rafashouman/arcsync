@@ -16,7 +16,7 @@ import type { InstagramAccountSummary } from '@/src/data/accounts';
 
 const statusMessages: Record<string, { tone: 'success' | 'error' | 'info'; text: string }> = {
   connected: { tone: 'success', text: 'Instagram conectado. O token foi armazenado com criptografia.' },
-  disconnected: { tone: 'success', text: 'Conta desconectada do FeedSync.' },
+  disconnected: { tone: 'success', text: 'Conta desconectada do Arcsync.' },
   'token-refreshed': { tone: 'success', text: 'Token do Instagram renovado por mais até 60 dias.' },
   'default-updated': { tone: 'success', text: 'Conta definida como padrão para publicações do Instagram.' },
   cancelled: { tone: 'info', text: 'Conexão cancelada no Instagram.' },

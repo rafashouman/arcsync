@@ -19,7 +19,7 @@ services:
       - .env.local
     environment:
       NODE_ENV: development
-      MONGODB_URI: mongodb://mongo:27017/feedsync
+      MONGODB_URI: mongodb://mongo:27017/arcsync
       PUBLIC_APP_URL: http://localhost:3000
       FEEDSYNC_UPLOADS_DIR: /app/uploads
     ports:

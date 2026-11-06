@@ -6,7 +6,7 @@ import path from 'node:path';
 import {randomBytes} from 'node:crypto';
 import {encryptArchive,decryptArchive} from '../ops/archive-crypto.mjs';
 test('backup authenticates content and key and never overwrites an existing destination',async()=>{
- const dir=await mkdtemp(path.join(tmpdir(),'feedsync-backup-test-'));
+ const dir=await mkdtemp(path.join(tmpdir(),'arcsync-backup-test-'));
  try {
   const source=path.join(dir,'source'),key=path.join(dir,'key'),wrong=path.join(dir,'wrong'),backup=path.join(dir,'backup'),restored=path.join(dir,'restored');
   const data=randomBytes(256*1024);
