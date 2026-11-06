@@ -37,8 +37,6 @@ export async function exchangeFacebookAuthorizationCode(config: ReturnType<typeo
   const granted = await get('me/permissions', {}, long.access_token);
   const permissions = Array.isArray(granted.data) ? granted.data : [];
   if (!FACEBOOK_SCOPES.every(scope => permissions.some((p: unknown) => isRecord(p) && p.permission === scope && p.status === 'granted'))) throw new SocialOAuthProviderError('O Facebook não concedeu as permissões de Páginas necessárias.');
-  // Bound page credentials to the originating authorization lifetime; reconnect on expiry.
-  const expiresAt = new Date(Date.now() + (typeof long.expires_in === 'number' && long.expires_in > 0 ? long.expires_in : 3600) * 1000);
   const result: ConnectedSocialAccount[] = [];
   let after = '';
   for (let page = 0; page < 20; page++) {
@@ -47,7 +45,7 @@ export async function exchangeFacebookAuthorizationCode(config: ReturnType<typeo
     for (const item of body.data) {
       if (!isRecord(item) || typeof item.id !== 'string' || !/^\d+$/.test(item.id) || typeof item.name !== 'string' || typeof item.access_token !== 'string') continue;
       if (!Array.isArray(item.tasks) || !item.tasks.some(task => task === 'CREATE_CONTENT' || task === 'MANAGE')) continue;
-      result.push({platformAccountId:item.id,accountName:item.name,accessToken:item.access_token,accessTokenExpiresAt:expiresAt,refreshToken:'',refreshTokenExpiresAt:null,permissions:FACEBOOK_SCOPES});
+      result.push({platformAccountId:item.id,accountName:item.name,accessToken:item.access_token,accessTokenExpiresAt:null,refreshToken:'',refreshTokenExpiresAt:null,permissions:FACEBOOK_SCOPES});
     }
     const paging = isRecord(body.paging) ? body.paging : undefined;
     if (!paging?.next) break;

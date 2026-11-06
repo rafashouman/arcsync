@@ -126,7 +126,7 @@ async function getValidAccessToken(workspaceId: string, accountId?: string) {
     throw new YouTubePublishError('Nenhuma conta padrão do YouTube está conectada.');
   }
 
-  const expiresAt = account.accessTokenExpiresAt.getTime();
+  const expiresAt = account.accessTokenExpiresAt?.getTime() ?? NaN;
   if (!Number.isFinite(expiresAt)) {
     throw new YouTubePublishError('A conta padrão do YouTube possui uma expiração de token inválida.');
   }

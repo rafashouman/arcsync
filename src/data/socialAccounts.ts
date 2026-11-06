@@ -19,7 +19,7 @@ export interface SocialAccountSummary {
   id: string;
   platformAccountId: string;
   accountName: string;
-  accessTokenExpiresAt: string;
+  accessTokenExpiresAt: string | null;
   refreshTokenExpiresAt: string | null;
   isDefault: boolean;
   connectedAt: string;
@@ -61,7 +61,9 @@ export async function listSocialAccountsForWorkspace(
     id: String(account._id),
     platformAccountId: account.platformAccountId,
     accountName: account.accountName,
-    accessTokenExpiresAt: new Date(account.expiresAt).toISOString(),
+    accessTokenExpiresAt: platform === 'facebook' || !account.expiresAt
+      ? null
+      : new Date(account.expiresAt).toISOString(),
     refreshTokenExpiresAt: account.refreshExpiresAt
       ? new Date(account.refreshExpiresAt).toISOString()
       : null,
@@ -227,7 +229,7 @@ export async function getDefaultSocialAccountForWorkspace(
     permissions: (account.permissions as string[] | undefined) ?? [],
     encryptedAccessToken: account.encryptedAccessToken as string,
     encryptedRefreshToken: (account.encryptedRefreshToken as string | undefined) ?? null,
-    accessTokenExpiresAt: new Date(account.expiresAt),
+    accessTokenExpiresAt: account.expiresAt ? new Date(account.expiresAt) : null,
     refreshTokenExpiresAt: account.refreshExpiresAt
       ? new Date(account.refreshExpiresAt)
       : null,

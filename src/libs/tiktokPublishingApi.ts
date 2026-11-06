@@ -48,21 +48,30 @@ export function validateTikTokUploadUrl(value: string) {
   try {
     url = new URL(value);
   } catch {
+    console.warn('[TikTok] URL de envio rejeitada:', { motivos: ['formato'] });
     throw new TikTokApiError('O TikTok retornou uma URL de envio inválida.');
   }
+  const motivos: string[] = [];
+  if (url.toString().length > 2048) motivos.push('comprimento');
+  if (url.protocol !== 'https:') motivos.push('protocolo');
   if (
-    url.toString().length > 2048 ||
-    url.protocol !== 'https:' ||
-    !(
-      /^open-upload(-[a-z0-9]+)*\.tiktokapis\.com$/.test(url.hostname) ||
-      url.hostname === 'upload.us.tiktokapis.com'
-    ) ||
-    !['/video/', '/upload/'].includes(url.pathname) ||
-    url.username ||
-    url.password ||
-    url.port ||
-    url.hash
-  ) {
+    !/^open-upload(-[a-z0-9]+)*\.tiktokapis\.com$/.test(url.hostname) &&
+    url.hostname !== 'upload.us.tiktokapis.com'
+  ) motivos.push('domínio');
+  if (!['/video/', '/upload/'].includes(url.pathname)) motivos.push('caminho');
+  if (url.username || url.password) motivos.push('credenciais na URL');
+  if (url.port) motivos.push('porta');
+  if (url.hash) motivos.push('fragmento');
+  if (motivos.length) {
+    const dominioReconhecido =
+      /^(?:[a-z0-9-]{1,32}\.)*(?:tiktokapis\.com|tiktok\.com|tiktokcdn\.com)$/.test(url.hostname);
+    console.warn('[TikTok] URL de envio rejeitada:', {
+      motivos,
+      dominio: dominioReconhecido ? url.hostname : 'não reconhecido',
+      caminho: ['/video/', '/upload/', '/video', '/upload'].includes(url.pathname)
+        ? url.pathname
+        : 'outro',
+    });
     throw new TikTokApiError('O destino da sessão de envio do TikTok é inválido.');
   }
   return url.toString();

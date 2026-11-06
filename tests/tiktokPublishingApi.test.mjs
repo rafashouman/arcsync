@@ -139,7 +139,8 @@ test('simulates TikTok file upload, resumable continuation, and status polling',
   assert.equal(mock.calls[0].url.match(/video\/init/g)?.length, 1);
 });
 
-test('rejects invalid upload URLs and malformed upload ranges before network calls', async () => {
+test('rejects invalid upload URLs and malformed upload ranges before network calls', async (t) => {
+  t.mock.method(console, 'warn', () => {});
   for (const invalidUrl of [
     'http://open-upload.tiktokapis.com/video/?upload_id=x',
     'https://evil.example/video/?upload_id=x',
@@ -175,6 +176,44 @@ test('rejects invalid upload URLs and malformed upload ranges before network cal
     /intervalo inválido/,
   );
   assert.equal(mock.calls.length, 0);
+});
+
+test('logs rejection reasons without exposing upload credentials or URL parameters', async (t) => {
+  const warnings = [];
+  t.mock.method(console, 'warn', (...args) => warnings.push(args));
+  const mock = createMockFetch([
+    jsonResponse({
+      publish_id: 'publish-session-123',
+      upload_url: 'https://user:password@upload-sandbox.tiktokapis.com/private-path-secret?upload_token=query-secret#fragment-secret',
+    }),
+  ]);
+  await assert.rejects(
+    initializeTikTokVideoUpload(
+      accessToken,
+      {
+        title: 'Post',
+        privacyLevel: 'SELF_ONLY',
+        allowComments: false,
+        allowDuet: false,
+        allowStitch: false,
+        brandOrganic: false,
+        brandContent: false,
+      },
+      { videoSize: 1, chunkSize: 1, totalChunkCount: 1 },
+      mock.fetcher,
+    ),
+    /destino da sessão de envio do TikTok é inválido/,
+  );
+  assert.deepEqual(warnings[0][1], {
+    motivos: ['domínio', 'caminho', 'credenciais na URL', 'fragmento'],
+    dominio: 'upload-sandbox.tiktokapis.com',
+    caminho: 'outro',
+  });
+  assert.doesNotMatch(JSON.stringify(warnings), /user|password|private-path-secret|query-secret|fragment-secret/);
+
+  assert.throws(() => validateTikTokUploadUrl('not-a-url-with-secret'), TikTokApiError);
+  assert.deepEqual(warnings[1][1], { motivos: ['formato'] });
+  assert.doesNotMatch(JSON.stringify(warnings), /not-a-url-with-secret/);
 });
 
 test('accepts documented TikTok upload destinations during initialization and upload', async () => {

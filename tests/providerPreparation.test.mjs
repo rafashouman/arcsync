@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { youtubeMetadata, validateYouTubeOptions } from '../src/libs/youtubeMetadata.ts';
 import { initializeTikTokVideoFromUrl } from '../src/libs/tiktokPublishingApi.ts';
 import { publishFacebookPagePost } from '../src/libs/facebookPublishingApi.ts';
+import { exchangeFacebookAuthorizationCode } from '../src/libs/facebookOAuth.ts';
 import { validatePostInput } from '../src/libs/postValidation.ts';
 import { TikTokPostingQuota } from '../src/models/TikTokPostingQuota.ts';
 import {
@@ -65,6 +66,34 @@ test('Facebook distinguishes confirmed rejection from ambiguous network/server o
     [async () => Response.json({}, {status:400}),false],
     [async () => Response.json({}),true],
   ]) await assert.rejects(publishFacebookPagePost('123','fake','v26.0','Texto',undefined,fetcher),e => e.mayHaveSucceeded === uncertain);
+});
+test('Facebook page tokens do not inherit the user authorization expiry', async () => {
+  for (const expiresIn of [undefined, 3600]) {
+    const pages = await exchangeFacebookAuthorizationCode(
+      {clientId:'fake',clientSecret:'fake',redirectUri:'https://test.example/api/social/facebook/callback',version:'v26.0'},
+      'code',
+      async (input) => {
+        const url = String(input);
+        if (url.includes('oauth/access_token')) return Response.json({access_token:'user-token',expires_in:expiresIn});
+        if (url.includes('me/permissions')) return Response.json({data:['pages_show_list','pages_read_engagement','pages_manage_posts'].map(permission => ({permission,status:'granted'}))});
+        return Response.json({data:[{id:'123',name:'Page',access_token:'page-token',tasks:['CREATE_CONTENT']}]});
+      },
+    );
+    assert.equal(pages[0].accessTokenExpiresAt, null);
+    assert.equal(pages[0].accessToken, 'page-token');
+  }
+});
+test('Facebook reports rejected page authorization without exposing provider details', async () => {
+  await assert.rejects(
+    publishFacebookPagePost('123','fake','v26.0','Texto',undefined,
+      async () => Response.json({error:{code:190,message:'secret-provider-details'}}, {status:400})),
+    (error) => {
+      assert.match(error.message, /Reconecte a conta/);
+      assert.doesNotMatch(error.message, /secret-provider-details/);
+      assert.equal(error.mayHaveSucceeded, false);
+      return true;
+    },
+  );
 });
 test('Facebook rejects unavailable formats and supports text without media', () => {
   const input = {caption:'Texto',platforms:['facebook'],scheduledFor:'2030-01-01T00:00:00Z',timeZone:'UTC',mediaUrls:[],destinations:[{platform:'facebook',accountId:'b'.repeat(24),format:'feed'}]};

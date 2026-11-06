@@ -158,7 +158,7 @@ FACEBOOK_GRAPH_API_VERSION=v26.0
 ```
 
 5. Reinicie e use **Contas sociais → Facebook Páginas → Conectar**. Na autorização Meta, escolha as Páginas que deseja disponibilizar à equipe. O FeedSync armazena as Páginas concedidas com tarefa de criar conteúdo/gerenciar. Em cada post, selecione explicitamente a Página de destino.
-6. Tokens de Página ficam criptografados. O conector limita sua utilização à validade da autorização obtida e exige reconexão quando ela expira; não há refresh token de Facebook.
+6. Tokens de Página ficam criptografados. A validade da autorização do usuário não é usada como prazo do token da Página; o Facebook valida o token ao publicar. Se a Meta recusar a autorização, reconecte a Página. Não há refresh token de Facebook.
 7. Teste texto e depois uma foto JPG/PNG. O agendamento ocorre na fila do FeedSync: o cron envia ao Facebook no horário escolhido. A primeira versão não fornece campo específico de prévia de link, vídeos ou múltiplas fotos.
 8. Para atender clientes externos, conclua revisão, acessos e verificação empresarial pedidos pelo painel. Remover a Página do FeedSync remove a conexão local; para revogar o app na Meta, remova-o também nas integrações comerciais do Facebook.
 

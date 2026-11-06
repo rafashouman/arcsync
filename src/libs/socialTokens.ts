@@ -52,7 +52,11 @@ export async function getValidSocialAccessToken(
   }
 
   const now = Date.now();
-  if (account.accessTokenExpiresAt.getTime() - now > REFRESH_MARGIN_MS) {
+  if (
+    platform === 'facebook' ||
+    (account.accessTokenExpiresAt &&
+      account.accessTokenExpiresAt.getTime() - now > REFRESH_MARGIN_MS)
+  ) {
     try {
       return decryptSocialToken(account.encryptedAccessToken);
     } catch {
@@ -60,6 +64,12 @@ export async function getValidSocialAccessToken(
         `Não foi possível descriptografar o token do ${label}. Reconecte a conta.`,
       );
     }
+  }
+
+  if (!account.accessTokenExpiresAt) {
+    throw new PlatformPublishError(
+      `A validade da autorização do ${label} é desconhecida. Reconecte a conta.`,
+    );
   }
 
   if (

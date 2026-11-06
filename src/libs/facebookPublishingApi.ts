@@ -13,6 +13,12 @@ export async function publishFacebookPagePost(pageId: string, token: string, ver
     });
   } catch { throw new FacebookPublishError('O Facebook não confirmou o resultado do envio.', true); }
   const body: unknown = await response.json().catch(() => null);
+  if (!response.ok && response.status < 500 && response.status !== 408 &&
+      typeof body === 'object' && body !== null && 'error' in body &&
+      typeof body.error === 'object' && body.error !== null &&
+      'code' in body.error && body.error.code === 190) {
+    throw new FacebookPublishError('O Facebook recusou a autorização da Página. Reconecte a conta antes de publicar.');
+  }
   if (!response.ok) throw new FacebookPublishError(`O Facebook recusou a publicação (HTTP ${response.status}). Confira permissões, mídia e conexão.`, response.status >= 500 || response.status === 408);
   const data = body as {id?: unknown; post_id?: unknown} | null;
   const id = data?.post_id ?? data?.id;

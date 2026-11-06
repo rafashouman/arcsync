@@ -28,6 +28,8 @@ Não ativar outro cron em paralelo sem necessidade. Definir `PUBLISHING_ENABLED=
 
 O diário técnico guarda datas, resultado e contagem, sem conteúdo de posts/tokens, com expiração de sete dias. Esse diário técnico é diferente do histórico de publicações proposto para 180 dias.
 
+Quando uma URL de envio do TikTok for rejeitada, o log do app registra os motivos, o domínio reconhecido e uma categoria de caminho. Não registra a URL completa, parâmetros, credenciais ou fragmento. Em Compose, consulte `docker compose -f compose.production.yaml logs app` após uma nova tentativa; não compartilhe logs sem revisá-los.
+
 O monitor registra mudanças e recuperações em logs. `OPERATIONS_ALERT_WEBHOOK` é opcional: quando configurado, recebe somente serviço, estado, tipo de evento e data; nunca tokens, textos ou IDs de clientes. A entrega não foi ativada nem testada em um destinatário real. Se falhar, tenta novamente no próximo ciclo. O receptor deve aceitar esse JSON ou usar um adaptador.
 
 Um monitor no mesmo servidor não detecta a queda total da própria VPS. Na etapa HTTPS, configurar também uma verificação externa autenticada de `/api/health/operations`, com o segredo guardado pelo monitor. Não colocar o segredo na URL. Conectar um canal de alerta e demonstrar recebimento/recuperação faz parte da ativação final.

@@ -2,7 +2,7 @@ import 'server-only';
 
 export interface OAuthTokenSet {
   accessToken: string;
-  accessTokenExpiresAt: Date;
+  accessTokenExpiresAt: Date | null;
   refreshToken: string;
   refreshTokenExpiresAt: Date | null;
 }

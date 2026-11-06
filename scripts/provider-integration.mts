@@ -35,7 +35,7 @@ try {
   assert.equal(pages.length,1);
   await assert.rejects(exchangeFacebookAuthorizationCode({clientId:'fake',clientSecret:'fake',redirectUri:'https://test.example/api/social/facebook/callback',version:'v26.0'},'fake',async input => String(input).includes('oauth/access_token') ? Response.json({access_token:'fake'}) : Response.json({data:[]})));
   await saveSocialAccount(workspace,workspace,'facebook',pages[0]);
-  await saveSocialAccount(workspace,workspace,'tiktok',{...pages[0],platformAccountId:'tiktok-test',refreshToken:'fake-refresh',permissions:['video.publish']});
+  await saveSocialAccount(workspace,workspace,'tiktok',{...pages[0],platformAccountId:'tiktok-test',accessTokenExpiresAt:new Date(Date.now()+3600_000),refreshToken:'fake-refresh',permissions:['video.publish']});
   const facebook = (await listSocialAccountsForWorkspace(workspace,'facebook'))[0];
   const tiktok = (await listSocialAccountsForWorkspace(workspace,'tiktok'))[0];
   globalThis.fetch = async (input,init) => {

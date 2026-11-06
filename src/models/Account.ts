@@ -9,7 +9,7 @@ export interface IAccount extends Document {
   encryptedAccessToken: string;
   encryptedRefreshToken?: string;
   tokenIssuedAt: Date;
-  expiresAt: Date;
+  expiresAt: Date | null;
   refreshExpiresAt?: Date;
   permissions: string[];
   isDefault: boolean;
@@ -24,7 +24,12 @@ const AccountSchema = new Schema<IAccount>({
   encryptedAccessToken: { type: String, required: true, select: false },
   encryptedRefreshToken: { type: String, select: false },
   tokenIssuedAt: { type: Date, required: true },
-  expiresAt: { type: Date, required: true },
+  expiresAt: {
+    type: Date,
+    required: function (this: IAccount | mongoose.Query<unknown, IAccount>) {
+      return (this instanceof mongoose.Query ? this.getFilter().platform : this.platform) !== 'facebook';
+    },
+  },
   refreshExpiresAt: { type: Date },
   permissions: { type: [String], default: [] },
   isDefault: { type: Boolean, default: false, index: true },

@@ -191,8 +191,11 @@ export default function OAuthSocialAccounts({
                             {account.accountName}
                           </p>
                           <p className="mt-1 text-[11px] text-slate-500">
-                            Token válido até{' '}
-                            {new Date(account.accessTokenExpiresAt).toLocaleDateString('pt-BR')}
+                            {platform === 'facebook'
+                              ? 'Validade do token verificada pelo Facebook ao publicar'
+                              : account.accessTokenExpiresAt
+                                ? `Token válido até ${new Date(account.accessTokenExpiresAt).toLocaleDateString('pt-BR')}`
+                                : 'Validade do token desconhecida'}
                           </p>
                         </div>
                       </div>
