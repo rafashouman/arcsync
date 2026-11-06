@@ -145,10 +145,24 @@ test('rejects invalid upload URLs and malformed upload ranges before network cal
     'https://evil.example/video/?upload_id=x',
     'https://user:pass@open-upload.tiktokapis.com/video/?upload_id=x',
     'https://open-upload.tiktokapis.com/other/?upload_id=x',
+    'https://upload.us.tiktokapis.com.evil.example/video/?upload_id=x',
+    'https://upload.us.tiktokapis.com:8443/video/?upload_id=x',
+    'https://upload.us.tiktokapis.com/video/?upload_id=x#fragment',
   ]) {
     assert.throws(() => validateTikTokUploadUrl(invalidUrl), TikTokApiError);
   }
   const mock = createMockFetch([]);
+  await assert.rejects(
+    uploadTikTokVideoChunk(
+      'https://evil.example/video/?upload_id=x',
+      Buffer.from('1234'),
+      { start: 0, end: 3 },
+      4,
+      'video/mp4',
+      mock.fetcher,
+    ),
+    /destino da sessão de envio do TikTok é inválido/,
+  );
   await assert.rejects(
     uploadTikTokVideoChunk(
       uploadUrl,
@@ -161,6 +175,43 @@ test('rejects invalid upload URLs and malformed upload ranges before network cal
     /intervalo inválido/,
   );
   assert.equal(mock.calls.length, 0);
+});
+
+test('accepts documented TikTok upload destinations during initialization and upload', async () => {
+  for (const documentedUrl of [
+    'https://upload.us.tiktokapis.com/video/?upload_id=123&upload_token=example',
+    'https://open-upload.tiktokapis.com/upload/?upload_id=123&upload_token=example',
+  ]) {
+    const mock = createMockFetch([
+      jsonResponse({ publish_id: 'publish-session-123', upload_url: documentedUrl }),
+      new Response(null, { status: 201 }),
+    ]);
+    const session = await initializeTikTokVideoUpload(
+      accessToken,
+      {
+        title: 'Post',
+        privacyLevel: 'SELF_ONLY',
+        allowComments: false,
+        allowDuet: false,
+        allowStitch: false,
+        brandOrganic: false,
+        brandContent: false,
+      },
+      { videoSize: 4, chunkSize: 4, totalChunkCount: 1 },
+      mock.fetcher,
+    );
+    await uploadTikTokVideoChunk(
+      session.uploadUrl,
+      Buffer.from('1234'),
+      { start: 0, end: 3 },
+      4,
+      'video/mp4',
+      mock.fetcher,
+    );
+    assert.equal(mock.calls[1].url, documentedUrl);
+    assert.equal(mock.calls[1].init.redirect, 'error');
+    assert.equal(mock.calls[1].headers.has('authorization'), false);
+  }
 });
 
 test('surfaces retryable API failures and refuses malformed init responses', async () => {

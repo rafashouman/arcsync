@@ -53,8 +53,11 @@ export function validateTikTokUploadUrl(value: string) {
   if (
     url.toString().length > 2048 ||
     url.protocol !== 'https:' ||
-    !/^open-upload(-[a-z0-9]+)*\.tiktokapis\.com$/.test(url.hostname) ||
-    url.pathname !== '/video/' ||
+    !(
+      /^open-upload(-[a-z0-9]+)*\.tiktokapis\.com$/.test(url.hostname) ||
+      url.hostname === 'upload.us.tiktokapis.com'
+    ) ||
+    !['/video/', '/upload/'].includes(url.pathname) ||
     url.username ||
     url.password ||
     url.port ||
@@ -221,9 +224,10 @@ export async function uploadTikTokVideoChunk(
   }
   const body = new Uint8Array(chunk.byteLength);
   body.set(chunk);
+  const validatedUploadUrl = validateTikTokUploadUrl(uploadUrl);
   let response: Response;
   try {
-    response = await fetcher(validateTikTokUploadUrl(uploadUrl), {
+    response = await fetcher(validatedUploadUrl, {
       method: 'PUT',
       headers: {
         'Content-Length': String(chunk.length),
