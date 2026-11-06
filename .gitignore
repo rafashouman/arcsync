@@ -18,6 +18,7 @@
 /out/
 
 # production
+.secrets.md
 /build
 /uploads/
 
@@ -41,3 +42,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
