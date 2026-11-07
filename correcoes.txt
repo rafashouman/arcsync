@@ -1,0 +1,4 @@
+semana em destaque no calendario, com boxes maiores e espaço para mistrar todos agendamentos diários. Ao pasar o mouse sobre o dia, mostrar um modal flutuante com os agendamentos destacados.
+
+
+falhas: facebok desconecta sozinho muitas vezes
