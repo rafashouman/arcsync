@@ -21,7 +21,6 @@ async function Dashboard() {
     { label: 'Publicados', value: posts.filter(p => p.status === 'published').length },
     { label: 'Precisam de atenção', value: posts.filter(p => p.status === 'failed' || p.publishMayHaveSucceeded).length },
   ];
-
   return <div className="dashboard">
     <header className="dashboard-header"><Link href="/" className="brand" aria-label="Arcsync — início"><BrandLogo /></Link><div className="flex flex-wrap items-center gap-4"><span className="dashboard-muted text-sm">{workspace.workspaceName}</span><SignOutButton email={user.email}/></div></header>
     <nav className="dashboard-nav" aria-label="Navegação principal"><Link href="/" aria-current="page">Início</Link><Link href="/calendar">Calendário</Link><Link href="/monitoring">Monitoramento</Link><Link href="/settings/accounts">Contas sociais</Link></nav>
