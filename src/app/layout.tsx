@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ThemeToggle from '@/src/components/ThemeToggle';
+import AppNavigation from '@/src/components/AppNavigation';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=localStorage.getItem('arcsync-theme')==='light'?'light':'dark'}catch{}" }}/></head>
-      <body className="min-h-full flex flex-col"><div className="appearance-bar"><ThemeToggle /></div>{children}</body>
+      <body className="min-h-full flex flex-col"><AppNavigation /><div id="page-content" tabIndex={-1}>{children}</div></body>
     </html>
   );
 }

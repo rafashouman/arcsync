@@ -1,4 +1,5 @@
 import 'server-only';
+import { recordPublicationEvent } from '@/src/data/monitorLogs';
 import { publishClaimedFacebookPost } from '@/src/libs/facebookPublisher';
 
 import {
@@ -14,6 +15,20 @@ import { publishClaimedYouTubePost } from '@/src/libs/youtubePublisher';
 
 export async function publishClaimedPost(post: ClaimedPost) {
   const plan = planDestinations(post, post.publishStates, Date.now());
+  let outcome: Awaited<ReturnType<typeof executeStep>>;
+  try {
+    outcome = await executeStep(post, plan);
+  } catch (error) {
+    await recordPublicationEvent(post.workspaceId, post._id, 'worker-error', plan.platform, post.processingRunId);
+    throw error;
+  }
+  if (outcome !== 'waiting') {
+    await recordPublicationEvent(post.workspaceId, post._id, outcome === 'retrying' ? 'retry' : outcome, plan.platform, post.processingRunId);
+  }
+  return outcome;
+}
+
+async function executeStep(post: ClaimedPost, plan: ReturnType<typeof planDestinations>) {
   const platform = plan.platform;
   if (!platform && !plan.complete) {
     if (!Number.isFinite(plan.nextAt)) { await failClaimedPost(post._id, post.processingRunId, 'Horário de destino inválido.'); return 'failed' as const; }

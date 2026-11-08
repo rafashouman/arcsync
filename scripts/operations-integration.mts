@@ -27,6 +27,20 @@ try {
  globalThis.fetch=async()=>{throw new Error('Recovery must not make a new external post');};
  try {assert.equal(await publishClaimedPost(recovered!),'uncertain');} finally {globalThis.fetch=originalFetch;}
  assert.equal((await data.getPostForWorkspace(workspace,old._id))?.publishMayHaveSucceeded,true);
+ const {listPublicationLogs, recordPublicationEvent} = await import('../src/data/monitorLogs');
+ const result = await listPublicationLogs(workspace, 'error');
+ assert.ok(result.available);
+ assert.equal(result.entries.filter(log => log.postId === old._id && log.event === 'uncertain').length, 1);
+ await recordPublicationEvent(workspace, old._id, 'uncertain', 'facebook', recovered!.processingRunId);
+ assert.equal((await listPublicationLogs(workspace, 'error')).entries.length, result.entries.length);
+ assert.equal((await listPublicationLogs(workspace + '-other')).entries.length, 0);
+ const logs = mongoose.connection.db!.collection('publication_logs');
+ const indexes = await logs.indexes();
+ assert.ok(indexes.some(index => index.key.expiresAt === 1 && index.expireAfterSeconds === 0));
+ const item = result.entries[0];
+ assert.equal(item.expiresAt.getTime() - item.at.getTime(), 7 * 86400000);
+ await logs.updateOne({_id:item._id} as never, {$set:{at:new Date(Date.now()-8*86400000)}});
+ assert.ok(!(await listPublicationLogs(workspace)).entries.some(log => log._id === item._id));
  const run=await ops.beginQueueRun();runs.push(run);await ops.finishQueueRun(run,'healthy');
  assert.equal((await ops.getOperationsHealth()).status,'healthy');
  await mongoose.connection.db!.collection('operational_runs').updateOne({_id:run} as never,{$set:{startedAt:new Date(Date.now()-301000)}});
@@ -40,6 +54,7 @@ try {
 } finally {
  if(mongoose.connection.readyState===1) {
   await Post.deleteMany({workspaceId:workspace});
+  await mongoose.connection.db!.collection('publication_logs').deleteMany({ workspaceId: workspace });
   // This database is dedicated to this fixture; operational metadata contains no customer data.
   await mongoose.connection.db!.collection('operational_runs').deleteMany({});
  }

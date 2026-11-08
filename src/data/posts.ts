@@ -1,3 +1,4 @@
+import { recordPublicationEvent } from './monitorLogs';
 import 'server-only';
 
 import { randomUUID } from 'crypto';
@@ -30,6 +31,7 @@ function serializePost(post: {
   deletedAt?: Date | string | null;
   _id: unknown;
   destinations?: PostRecord['destinations'];
+  updatedAt?: Date | string;
   caption?: string;
   platforms?: PostRecord['platforms'];
   scheduledFor?: Date | string | null;
@@ -64,6 +66,7 @@ function serializePost(post: {
     history: post.history?.map(h => ({at:h.at,event:h.event,runId:h.runId,states:h.states?.map(s => ({platform:s.platform,state:s.state}))})) ?? [],
     ...(post.deletedAt ? {deletedAt:new Date(post.deletedAt).toISOString()} : {}),
     _id: String(post._id),
+    updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : undefined,
     ...(post.workspaceId ? { workspaceId: post.workspaceId } : {}),
     ...(post.userId ? { createdBy: post.userId } : {}),
     ...(post.mediaOwnerKeys
@@ -219,6 +222,7 @@ export async function createPostForWorkspace(
         ? [{ action: 'requested', userId: creatorId, at: new Date().toISOString() }]
         : [],
     };
+    post.updatedAt = new Date().toISOString();
     mockPosts.push({ ownerId: workspaceId, post });
     return post;
   }
@@ -235,6 +239,7 @@ export async function createPostForWorkspace(
       : [],
     status,
   });
+  await recordPublicationEvent(workspaceId, String(post._id), 'created');
   return serializePost(post);
 }
 
@@ -262,6 +267,7 @@ export async function updatePostForWorkspace(
     }
     entry.post = {
       ...entry.post,
+      updatedAt: new Date().toISOString(),
       ...input,
       status,
       mediaOwnerKeys: getMediaOwnerKeys([...input.mediaUrls, ...(input.destinations ?? []).flatMap(d => d.mediaUrls ?? [])]),
@@ -315,6 +321,7 @@ export async function updatePostForWorkspace(
     },
     { new: true, runValidators: true },
   ).lean();
+  if (post) await recordPublicationEvent(workspaceId, String(post._id), 'edited');
   return post ? serializePost(post) : null;
 }
 
@@ -339,6 +346,7 @@ export async function retryFailedPostForWorkspace(
 
     entry.post = {
       ...entry.post,
+      updatedAt: new Date().toISOString(),
       scheduledFor: retryAt.toISOString(),
       status: 'pending',
       errorLog: undefined,
@@ -384,6 +392,7 @@ export async function retryFailedPostForWorkspace(
     },
     { new: true, runValidators: true },
   ).lean();
+  if (post) await recordPublicationEvent(workspaceId, String(post._id), 'manual_retry');
   return post ? serializePost(post) : null;
 }
 
@@ -421,6 +430,7 @@ export async function reschedulePendingPostForWorkspace(
     { $set: { scheduledFor }, $push: {history:{at:new Date().toISOString(),event:'rescheduled'}} },
     { new: true, runValidators: true },
   ).lean();
+  if (post) await recordPublicationEvent(workspaceId, String(post._id), 'rescheduled');
   return post ? serializePost(post) : null;
 }
 
@@ -452,6 +462,7 @@ export async function deletePostForWorkspace(
     status: { $in: ['draft', 'pending', 'failed'] },
     publishMayHaveSucceeded: { $ne: true },
   }, { $set:{deletedAt:new Date()}, $push:{history:{at:new Date().toISOString(),event:'deleted'}} }, {returnDocument:'after'}).lean();
+  if (post) await recordPublicationEvent(workspaceId, String(post._id), 'deleted');
   return post ? serializePost(post) : null;
 }
 
@@ -501,6 +512,7 @@ export async function reviewPostForWorkspace(
     }
     entry.post = {
       ...entry.post,
+      updatedAt: new Date().toISOString(),
       approvalStatus: nextStatus,
       approvalHistory: [
         ...(entry.post.approvalHistory ?? []),
@@ -542,6 +554,7 @@ export async function reviewPostForWorkspace(
     },
     { new: true, runValidators: true },
   ).lean();
+  if (post) await recordPublicationEvent(workspaceId, String(post._id), action);
   return post ? serializePost(post) : null;
 }
 

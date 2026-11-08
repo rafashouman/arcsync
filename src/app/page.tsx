@@ -2,38 +2,61 @@ import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowUpRight, CalendarDays, FileText, Radio, Users, BarChart3 } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowUpRight, CalendarClock, CircleAlert, FilePenLine, Send } from 'lucide-react';
+import { InstagramIcon, FacebookIcon, TikTokIcon, YoutubeIcon } from '@/src/components/icons/SocialIcons';
+import styles from './home.module.css';
+import PostButton from '@/src/components/PostButton';
+import PostSummary from '@/src/components/PostSummary';
+import CreatePostModal from '@/src/components/CreatePostModal';
+import { listPostAccounts } from './actions/destinationActions';
+import { canCreateWorkspacePosts, canManageWorkspace, canReviewWorkspacePosts } from '@/src/libs/workspacePermissions';
 import { getCurrentUser } from '@/src/libs/authSession';
 import { getWorkspaceContext } from '@/src/data/workspaces';
 import { listPostsForWorkspace } from '@/src/data/posts';
 import SignOutButton from '@/src/components/SignOutButton';
-import BrandLogo from '@/src/components/BrandLogo';
+import CalendarSummary from '@/src/components/CalendarSummary';
 
 async function Dashboard() {
   await connection();
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const workspace = await getWorkspaceContext(user.uid, user.email);
-  const posts = await listPostsForWorkspace(workspace.workspaceId);
+  const [posts, connections] = await Promise.all([listPostsForWorkspace(workspace.workspaceId), listPostAccounts()]);
+  const names = Object.fromEntries(connections.accounts.map(a => [a.id, a.name]));
+  const create = canCreateWorkspacePosts(workspace.role);
+  const review = canReviewWorkspacePosts(workspace.role);
+  const connect = canManageWorkspace(workspace.role) && !connections.accounts.length && !connections.error;
+  const now = new Date().getTime();
+  const next = posts.filter(p => p.status === 'pending' && !['pending','rejected'].includes(p.approvalStatus ?? '') && Date.parse(p.scheduledFor ?? '') >= now)
+    .sort((a,b) => Date.parse(a.scheduledFor!) - Date.parse(b.scheduledFor!))[0];
+  const drafts = posts.filter(p => p.status === 'draft').sort((a,b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
+  const approvals = posts.filter(p => p.approvalStatus === 'pending').length;
   const counts = [
-    { label: 'Agendados', value: posts.filter(p => p.status === 'pending').length },
-    { label: 'Rascunhos', value: posts.filter(p => p.status === 'draft').length },
-    { label: 'Publicados', value: posts.filter(p => p.status === 'published').length },
-    { label: 'Precisam de atenção', value: posts.filter(p => p.status === 'failed' || p.publishMayHaveSucceeded).length },
+    { label: 'Agendados', key: 'pending', icon: CalendarClock, count: posts.filter(p => p.status === 'pending').length },
+    { label: 'Rascunhos', key: 'draft', icon: FilePenLine, count: drafts.length },
+    { label: 'Publicados', key: 'published', icon: Send, count: posts.filter(p => p.status === 'published').length },
+    { label: 'Precisam de atenção', key: 'attention', icon: CircleAlert, count: posts.filter(p => p.status === 'failed' || p.publishMayHaveSucceeded).length },
   ];
   return <div className="dashboard">
-    <header className="dashboard-header"><Link href="/" className="brand" aria-label="Arcsync — início"><BrandLogo /></Link><div className="flex flex-wrap items-center gap-4"><span className="dashboard-muted text-sm">{workspace.workspaceName}</span><SignOutButton email={user.email}/></div></header>
-    <nav className="dashboard-nav" aria-label="Navegação principal"><Link href="/" aria-current="page">Início</Link><Link href="/calendar">Calendário</Link><Link href="/monitoring">Monitoramento</Link><Link href="/settings/accounts">Contas sociais</Link></nav>
-    <section className="dashboard-hero"><div><p className="dashboard-eyebrow">SEU ESPAÇO DE CRIAÇÃO</p><h1>Boas ideias merecem<br/>ganhar o mundo.</h1><p className="dashboard-muted mt-5 max-w-lg leading-7">Organize seus conteúdos, acompanhe as publicações e planeje os próximos passos da sua presença nas redes.</p><Link className="dashboard-primary mt-7" href="/calendar">Planejar publicações <ArrowUpRight size={18}/></Link></div><div className="hero-art" aria-hidden="true"><div className="hero-card"><CalendarDays size={42}/><span>Uma ideia.<br/>Muitas possibilidades.</span><div className="hero-dots"><i/><i/><i/><i/></div></div><span className="hero-label">CRIE · PLANEJE · PUBLIQUE</span></div></section>
-    <section className="dashboard-stats" aria-label="Resumo das publicações">{counts.map(item => <div className="dashboard-panel" key={item.label}><span className="dashboard-muted text-sm">{item.label}</span><p className="mt-3 text-3xl font-semibold">{item.value}</p></div>)}</section>
-    <div className="dashboard-columns"><section className="dashboard-panel"><h2 className="text-lg font-semibold">Seu planejamento começa aqui</h2><p className="dashboard-muted mt-3 leading-7">Reserve um momento para suas próximas ideias. No calendário, você pode criar rascunhos e definir a publicação em cada rede.</p><Link href="/calendar" className="dashboard-link mt-6">Abrir calendário <ArrowUpRight size={16}/></Link></section>
-    <section className="dashboard-panel"><h2 className="text-lg font-semibold">Tudo no seu lugar</h2><div className="mt-4">{[
-      {href:'/settings/accounts',icon:Radio,title:'Contas sociais',text:'Conecte e gerencie suas redes'},
-      {href:'/analytics',icon:BarChart3,title:'Analytics',text:'Explore os dados disponíveis'},
-      {href:'/settings/team',icon:Users,title:'Sua equipe',text:'Organize a colaboração'},
-      {href:'/approvals',icon:FileText,title:'Aprovações',text:'Acompanhe as revisões'},
-    ].map(item => <Link className="dashboard-recent" href={item.href} key={item.href}><span className="dashboard-icon"><item.icon size={19}/></span><span className="flex-1"><span className="block text-sm font-medium">{item.title}</span><span className="dashboard-muted text-xs">{item.text}</span></span><ArrowUpRight size={16}/></Link>)}</div></section></div>
-    <footer className="dashboard-muted py-8 text-xs">Arcsync · Mais espaço para criar.</footer>
+    <header className="flex flex-wrap items-center justify-between gap-3 py-5"><span className="dashboard-muted text-sm">{workspace.workspaceName}</span><SignOutButton email={user.email}/></header>
+    <section className={styles.hero} aria-labelledby="home-headline">
+      <div className={styles.intro}>
+        <h1 id="home-headline">Boas ideias merecem<br/><span>ganhar o mundo.</span></h1>
+        <p>{posts.length ? 'Organize seus conteúdos, acompanhe as publicações e planeje os próximos passos da sua presença nas redes.' : connect ? 'Conecte o primeiro perfil para preparar sua publicação.' : connections.accounts.length ? `Perfil conectado: ${connections.accounts[0].name}. Sua agenda começa aqui.` : connections.error || 'Acompanhe aqui as publicações da equipe.'}</p>
+        {!posts.length && connect ? <Link className="dashboard-primary" href="/settings/accounts">Conectar uma rede <ArrowUpRight size={16}/></Link> : create ? <PostButton className="dashboard-primary">{posts.length ? 'Nova publicação' : 'Criar primeira publicação'} <ArrowUpRight size={16}/></PostButton> : <Link href="/calendar" className="dashboard-primary">Ver agenda <ArrowUpRight size={16}/></Link>}
+      </div>
+      <div aria-hidden="true" className={styles.orbit}>
+        <div className={styles.core}><Image src="/icon.png" width={64} height={64} alt=""/></div>
+        {[InstagramIcon, FacebookIcon, YoutubeIcon, TikTokIcon].map((Icon, index) => <span className={styles.satellite} key={index}><Icon size={22}/></span>)}
+      </div>
+    </section>
+    {posts.length > 0 && <section className="dashboard-panel mt-5 space-y-3"><h2 className="text-sm font-semibold">Próxima publicação</h2>{next ? <PostSummary post={next} names={names}/> : <p className="dashboard-muted text-sm">Nenhuma publicação pronta para ir ao ar.</p>}</section>}
+    {review && approvals > 0 && <Link href="/approvals" className="dashboard-panel my-3 block">Revisar publicações · {approvals} aguardando aprovação →</Link>}
+    <section className="dashboard-stats" aria-label="Resumo das publicações">{counts.map(item => <Link href={`/calendar?status=${item.key}#calendar`} className="dashboard-panel stat-link" key={item.key}><span className={styles.metricIcon} data-status={item.key}><item.icon size={18} aria-hidden="true"/></span><span className="dashboard-muted text-sm">{item.label}</span><p className="mt-2 text-3xl font-semibold">{item.count}</p></Link>)}</section>
+    {create && drafts[0] && <section className="dashboard-panel my-5 flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><h2 className="text-sm font-semibold">Último rascunho</h2><p className="dashboard-muted truncate">{drafts[0].caption || 'Sem legenda'}</p></div><PostButton post={drafts[0]} className="dashboard-link">Continuar rascunho →</PostButton></section>}
+    <CalendarSummary posts={posts}/>
+    {create && <CreatePostModal/>}
   </div>;
 }
 export default function Home() {

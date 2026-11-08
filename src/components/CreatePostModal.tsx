@@ -222,13 +222,15 @@ function PostModalContent({
       return new Set(times).size > 1;
     });
 
-  // Active tab in "3. Texto do post": 'all' or a specific platform
+  // Active tab in "Legenda": 'all' or a specific platform
   const [activeCaptionTab, setActiveCaptionTab] = useState<
     'all' | SocialPlatform
   >('all');
 
   // Toggle for advanced settings drawer/section in column 3
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const profileCount = destinations.filter(d => selectedPlatforms.includes(d.platform) && d.accountId).length;
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(true);
+  const [mobilePreview, setMobilePreview] = useState(false);
 
   // Confirmation dialogs (mLabs-style schedule confirmation & unsaved changes guard)
   const [confirmScheduleModal, setConfirmScheduleModal] = useState<
@@ -913,11 +915,11 @@ function PostModalContent({
       }}
       className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center bg-[#05070c]/85 p-2 text-slate-200 backdrop-blur-md sm:p-4"
     >
-      <section className="relative flex h-[95vh] w-[98vw] max-w-[1400px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11151f] shadow-2xl shadow-black/70">
+      <section className="relative flex h-[95dvh] w-[98vw] max-w-[1400px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11151f] shadow-2xl shadow-black/70">
         {/* Top Header */}
         <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#11151f] px-5 py-3.5 sm:px-7">
           <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-indigo-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">
+            <span className="hidden sm:inline rounded-lg bg-indigo-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">
               Estúdio de Publicação
             </span>
             <h2
@@ -1031,14 +1033,118 @@ function PostModalContent({
           disabled={lockedPost || isBusy || isUploading}
           className="custom-scrollbar flex-1 overflow-y-auto"
         >
-          <div className="grid min-h-full grid-cols-1 divide-y divide-white/[0.07] lg:grid-cols-12 lg:divide-x lg:divide-y-0">
-            {/* COLUMN 1 (Left): 1. Selecione perfis & 3. Texto do post */}
-            <div className="flex flex-col gap-6 p-5 lg:col-span-4">
-              {/* 1. Selecione perfis / contas */}
+          <div className="studio-layout">
+            <section className="studio-targets">
+              <h3>Onde publicar?</h3>
               <div>
                 <div className="mb-2.5 flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-200">
-                    1. Perfis e contas conectadas
+                    Redes sociais
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Clique para ativar/desativar
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {platforms.map(({ id, label, Icon, activeClass, badgeClass }) => {
+                    const isSelected = selectedPlatforms.includes(id);
+                    return (
+                      <button
+                        type="button"
+                        key={id}
+                        aria-pressed={isSelected}
+                        onClick={() => togglePlatform(id)}
+                        className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition ${
+                          isSelected
+                            ? activeClass
+                            : 'border-white/[0.08] bg-[#0c1018] text-slate-400 hover:border-white/20 hover:text-slate-200'
+                        }`}
+                      >
+                        <span
+                          className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                            isSelected
+                              ? badgeClass
+                              : 'bg-white/[0.06] text-slate-400'
+                          }`}
+                        >
+                          <Icon size={16} />
+                        </span>
+                        <span className="flex items-center gap-1">
+                          {label}
+                          {isSelected && <Check size={12} />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Format selector row for selected platforms (e.g. Feed / Reels / Carrossel / Story) */}
+                {selectedPlatforms.length > 0 && (
+                  <div className="mt-3 space-y-2 rounded-xl border border-white/[0.07] bg-[#0c1018] p-3">
+                    {selectedPlatforms.map((platform) => {
+                      const meta = platforms.find((p) => p.id === platform)!;
+                      const dest = destinations.find(
+                        (d) => d.platform === platform,
+                      );
+                      const currentFormat =
+                        dest?.format ??
+                        (platform === 'instagram' || platform === 'facebook'
+                          ? 'feed'
+                          : 'video');
+                      const formats = POST_FORMATS[platform];
+                      return (
+                        <div
+                          key={platform}
+                          className="flex flex-wrap items-center justify-between gap-2 text-xs"
+                        >
+                          <span className="font-medium text-slate-300">
+                            Formato {meta.label}:
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {formats.map((f) => (
+                              <button
+                                key={f.value}
+                                type="button"
+                                onClick={() =>
+                                  updateDestination(platform, {
+                                    format: f.value,
+                                  })
+                                }
+                                className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                                  currentFormat === f.value
+                                    ? 'bg-indigo-500 text-white'
+                                    : 'bg-[#171c28] text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                {f.value === 'feed'
+                                  ? 'Feed'
+                                  : f.value === 'reel'
+                                    ? 'Reels'
+                                    : f.value === 'carousel'
+                                      ? 'Carrossel'
+                                      : f.value === 'story'
+                                        ? 'Story'
+                                        : 'Vídeo'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {destinations.find((d) => d.platform === 'instagram')
+                      ?.format === 'story' && (
+                      <p className="text-[11px] text-amber-200">
+                        Story aceita 1 foto ou vídeo e não exibe legenda de
+                        texto.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-200">
+                    Perfis de destino
                   </span>
                   <span className="text-[11px] text-slate-500">
                     {accounts.length}{' '}
@@ -1057,8 +1163,7 @@ function PostModalContent({
                   <div className="space-y-2 rounded-xl border border-white/[0.08] bg-[#0c1018] p-3">
                     {selectedPlatforms.length === 0 ? (
                       <p className="text-xs text-slate-400">
-                        Selecione os canais na coluna central (passo 2) para
-                        vincular os perfis de destino.
+                        Selecione uma rede acima para escolher o perfil.
                       </p>
                     ) : (
                       selectedPlatforms.map((platform) => {
@@ -1066,9 +1171,8 @@ function PostModalContent({
                         const platformAccounts = accounts.filter(
                           (a) => a.platform === platform,
                         );
-                        const currentDest = destinations.find(
-                          (d) => d.platform === platform,
-                        );
+                        const currentDest = destinations.find(d => d.platform === platform);
+                        const profileName = platformAccounts.find(a => a.id === currentDest?.accountId)?.name;
                         return (
                           <div
                             key={platform}
@@ -1078,10 +1182,10 @@ function PostModalContent({
                               <span
                                 className={`flex h-6 w-6 items-center justify-center rounded-full ${meta.badgeClass}`}
                               >
-                                <meta.Icon size={13} />
+                                {profileName ? <span aria-hidden="true" className="text-[10px] font-bold">{profileName.replace(/^@/, '').slice(0,2).toLocaleUpperCase('pt-BR')}</span> : <meta.Icon size={13}/>}
                               </span>
                               <span className="text-xs font-medium text-slate-200">
-                                {meta.label}
+                                <meta.Icon size={12} className="inline"/> {meta.label}
                               </span>
                             </div>
                             <select
@@ -1108,15 +1212,16 @@ function PostModalContent({
                   </div>
                 )}
               </div>
-
-              {/* 3. Texto do post (mLabs tabbed editor: Todos | IG | FB | TT | YT) */}
+            </section>
+            <section className="studio-content">
+              <h3>O que publicar?</h3>
               <div className="flex flex-1 flex-col">
                 <div className="mb-2 flex items-center justify-between">
                   <label
                     htmlFor="post-caption"
                     className="text-xs font-semibold text-slate-200"
                   >
-                    3. Texto do post
+                    Legenda
                   </label>
                   {activeCaptionTab !== 'all' && (
                     <button
@@ -1283,122 +1388,10 @@ function PostModalContent({
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* COLUMN 2 (Center): 2. Selecione canais, 4. Mídias, 5. Data e horário */}
-            <div className="flex flex-col gap-6 p-5 lg:col-span-4">
-              {/* 2. Selecione canais */}
               <div>
                 <div className="mb-2.5 flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-200">
-                    2. Selecione canais
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Clique para ativar/desativar
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {platforms.map(({ id, label, Icon, activeClass, badgeClass }) => {
-                    const isSelected = selectedPlatforms.includes(id);
-                    return (
-                      <button
-                        type="button"
-                        key={id}
-                        aria-pressed={isSelected}
-                        onClick={() => togglePlatform(id)}
-                        className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition ${
-                          isSelected
-                            ? activeClass
-                            : 'border-white/[0.08] bg-[#0c1018] text-slate-400 hover:border-white/20 hover:text-slate-200'
-                        }`}
-                      >
-                        <span
-                          className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
-                            isSelected
-                              ? badgeClass
-                              : 'bg-white/[0.06] text-slate-400'
-                          }`}
-                        >
-                          <Icon size={16} />
-                        </span>
-                        <span className="flex items-center gap-1">
-                          {label}
-                          {isSelected && <Check size={12} />}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Format selector row for selected platforms (e.g. Feed / Reels / Carrossel / Story) */}
-                {selectedPlatforms.length > 0 && (
-                  <div className="mt-3 space-y-2 rounded-xl border border-white/[0.07] bg-[#0c1018] p-3">
-                    {selectedPlatforms.map((platform) => {
-                      const meta = platforms.find((p) => p.id === platform)!;
-                      const dest = destinations.find(
-                        (d) => d.platform === platform,
-                      );
-                      const currentFormat =
-                        dest?.format ??
-                        (platform === 'instagram' || platform === 'facebook'
-                          ? 'feed'
-                          : 'video');
-                      const formats = POST_FORMATS[platform];
-                      return (
-                        <div
-                          key={platform}
-                          className="flex flex-wrap items-center justify-between gap-2 text-xs"
-                        >
-                          <span className="font-medium text-slate-300">
-                            Formato {meta.label}:
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {formats.map((f) => (
-                              <button
-                                key={f.value}
-                                type="button"
-                                onClick={() =>
-                                  updateDestination(platform, {
-                                    format: f.value,
-                                  })
-                                }
-                                className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
-                                  currentFormat === f.value
-                                    ? 'bg-indigo-500 text-white'
-                                    : 'bg-[#171c28] text-slate-400 hover:text-slate-200'
-                                }`}
-                              >
-                                {f.value === 'feed'
-                                  ? 'Feed'
-                                  : f.value === 'reel'
-                                    ? 'Reels'
-                                    : f.value === 'carousel'
-                                      ? 'Carrossel'
-                                      : f.value === 'story'
-                                        ? 'Story'
-                                        : 'Vídeo'}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {destinations.find((d) => d.platform === 'instagram')
-                      ?.format === 'story' && (
-                      <p className="text-[11px] text-amber-200">
-                        Story aceita 1 foto ou vídeo e não exibe legenda de
-                        texto.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* 4. Mídias */}
-              <div>
-                <div className="mb-2.5 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-200">
-                    4. Mídias
+                    Mídias
                   </span>
                   <span className="text-[11px] text-slate-400">
                     {imageCount} {imageCount === 1 ? 'imagem' : 'imagens'} e{' '}
@@ -1534,12 +1527,169 @@ function PostModalContent({
                   </div>
                 )}
               </div>
+              <button type="button" className="dashboard-link lg:hidden" aria-expanded={mobilePreview} aria-controls="studio-preview" onClick={() => setMobilePreview(!mobilePreview)}>{mobilePreview ? 'Ocultar prévia' : 'Ver prévia'}</button>
+            </section>
+            <section id="studio-preview" className={`studio-preview ${mobilePreview ? '' : 'hidden lg:block'}`}>
+              <div className="flex flex-1 flex-col">
+                <div className="mb-2.5 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-200">
+                    Prévia
+                  </span>
+                  <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#141926] px-1.5 py-1">
+                    <button
+                      type="button"
+                      onClick={() => cyclePreviewPlatform(-1)}
+                      aria-label="Canal anterior"
+                      className="rounded p-0.5 text-slate-400 hover:bg-white/10 hover:text-white"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span className="min-w-[90px] text-center text-[11px] font-medium text-slate-200">
+                      {previewPlatformDetails.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => cyclePreviewPlatform(1)}
+                      aria-label="Próximo canal"
+                      className="rounded p-0.5 text-slate-400 hover:bg-white/10 hover:text-white"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
 
-              {/* 5. Data e horário das publicações (Unified by default, optional per-network override) */}
+                {/* Social Feed Card Simulation */}
+                <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-2xl border border-slate-200/15 bg-white text-slate-900 shadow-lg">
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${previewPlatformDetails.badgeClass}`}
+                      >
+                        <previewPlatformDetails.Icon size={15} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-slate-900">
+                          {previewAccountName}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {previewDateTime.date} às {previewDateTime.time}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Media Area */}
+                  {previewMediaUrls.length > 0 ? (
+                    <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-950">
+                      {(() => {
+                        const safeIdx = Math.min(
+                          previewMediaIndex,
+                          previewMediaUrls.length - 1,
+                        );
+                        const currentUrl = previewMediaUrls[safeIdx];
+                        const isVideo = isVideoMediaUrl(currentUrl);
+                        return isVideo ? (
+                          <video
+                            key={currentUrl}
+                            src={currentUrl}
+                            controls
+                            muted
+                            playsInline
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <Image
+                            key={currentUrl}
+                            src={currentUrl}
+                            alt="Prévia da publicação"
+                            fill
+                            sizes="360px"
+                            unoptimized
+                            className="object-cover"
+                          />
+                        );
+                      })()}
+
+                      {previewMediaUrls.length > 1 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewMediaIndex(
+                                (i) =>
+                                  (i - 1 + previewMediaUrls.length) %
+                                  previewMediaUrls.length,
+                              )
+                            }
+                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewMediaIndex(
+                                (i) => (i + 1) % previewMediaUrls.length,
+                              )
+                            }
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                          <span className="absolute right-2.5 top-2.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">
+                            {Math.min(
+                              previewMediaIndex + 1,
+                              previewMediaUrls.length,
+                            )}
+                            /{previewMediaUrls.length}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-slate-100 px-6 text-center text-xs text-slate-500">
+                      <ImagePlus size={24} className="text-slate-400" />
+                      <span>
+                        Aguardando conteúdo. Informe os canais e as mídias
+                        desejadas para visualização.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Social Action Icons Row */}
+                  <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-2.5 text-slate-700">
+                    <div className="flex items-center gap-3.5">
+                      <Heart size={18} />
+                      <MessageCircle size={18} />
+                      <Send size={18} />
+                    </div>
+                    <Bookmark size={18} />
+                  </div>
+
+                  {/* Card Caption */}
+                  <div className="max-h-36 overflow-y-auto px-3.5 py-2.5">
+                    <p className="whitespace-pre-wrap break-words text-xs leading-5 text-slate-800">
+                      {previewDest?.format === 'story'
+                        ? 'Story: texto incorporado na própria mídia'
+                        : previewPlatform === 'youtube' && previewDest?.youtube
+                          ? `${previewDest.youtube.title}\n${previewDest.youtube.description}`
+                          : previewPlatform === 'tiktok' && tiktokTitle.trim()
+                            ? tiktokTitle
+                            : previewDest?.caption ||
+                              caption ||
+                              'A legenda da sua publicação aparecerá aqui...'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section className="studio-schedule">
+              <h3>Quando publicar?</h3>
               <div>
                 <div className="mb-2.5 flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-200">
-                    5. Data e horário das publicações
+                    Data, horário e fuso
                   </span>
                   <select
                     value={timeZone}
@@ -1724,11 +1874,7 @@ function PostModalContent({
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* COLUMN 3 (Right): 6. Configurações avançadas & Live Preview */}
-            <div className="flex flex-col gap-5 bg-[#0c1018]/60 p-5 lg:col-span-4">
-              {/* 6. Configurações avançadas button & collapsible panel */}
+              {(hasTikTokSelected || selectedPlatforms.includes('youtube')) && (
               <div>
                 <button
                   type="button"
@@ -1743,7 +1889,7 @@ function PostModalContent({
                 >
                   <span className="flex items-center gap-2">
                     <Settings2 size={15} />
-                    6. Configurações avançadas (TikTok / YouTube)
+                    Opções da rede
                   </span>
                   <span className="text-[11px] opacity-80">
                     {showAdvancedSettings ? 'Ocultar' : 'Abrir'}
@@ -1751,9 +1897,7 @@ function PostModalContent({
                 </button>
 
                 {/* Auto-show advanced settings when TikTok or YouTube is selected, or when toggled */}
-                {(showAdvancedSettings ||
-                  hasTikTokSelected ||
-                  selectedPlatforms.includes('youtube')) && (
+                {(showAdvancedSettings) && (
                   <div className="mt-3 space-y-4">
                     {/* TikTok settings */}
                     {hasTikTokSelected && (
@@ -2085,162 +2229,8 @@ function PostModalContent({
                   </div>
                 )}
               </div>
-
-              {/* Live Preview Card (mLabs style) */}
-              <div className="flex flex-1 flex-col">
-                <div className="mb-2.5 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-200">
-                    Preview
-                  </span>
-                  <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#141926] px-1.5 py-1">
-                    <button
-                      type="button"
-                      onClick={() => cyclePreviewPlatform(-1)}
-                      aria-label="Canal anterior"
-                      className="rounded p-0.5 text-slate-400 hover:bg-white/10 hover:text-white"
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <span className="min-w-[90px] text-center text-[11px] font-medium text-slate-200">
-                      {previewPlatformDetails.label}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => cyclePreviewPlatform(1)}
-                      aria-label="Próximo canal"
-                      className="rounded p-0.5 text-slate-400 hover:bg-white/10 hover:text-white"
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Social Feed Card Simulation */}
-                <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-2xl border border-slate-200/15 bg-white text-slate-900 shadow-lg">
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${previewPlatformDetails.badgeClass}`}
-                      >
-                        <previewPlatformDetails.Icon size={15} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-slate-900">
-                          {previewAccountName}
-                        </p>
-                        <p className="text-[10px] text-slate-500">
-                          {previewDateTime.date} às {previewDateTime.time}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Media Area */}
-                  {previewMediaUrls.length > 0 ? (
-                    <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-950">
-                      {(() => {
-                        const safeIdx = Math.min(
-                          previewMediaIndex,
-                          previewMediaUrls.length - 1,
-                        );
-                        const currentUrl = previewMediaUrls[safeIdx];
-                        const isVideo = isVideoMediaUrl(currentUrl);
-                        return isVideo ? (
-                          <video
-                            key={currentUrl}
-                            src={currentUrl}
-                            controls
-                            muted
-                            playsInline
-                            className="h-full w-full object-contain"
-                          />
-                        ) : (
-                          <Image
-                            key={currentUrl}
-                            src={currentUrl}
-                            alt="Prévia da publicação"
-                            fill
-                            sizes="360px"
-                            unoptimized
-                            className="object-cover"
-                          />
-                        );
-                      })()}
-
-                      {previewMediaUrls.length > 1 && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setPreviewMediaIndex(
-                                (i) =>
-                                  (i - 1 + previewMediaUrls.length) %
-                                  previewMediaUrls.length,
-                              )
-                            }
-                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
-                          >
-                            <ChevronLeft size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setPreviewMediaIndex(
-                                (i) => (i + 1) % previewMediaUrls.length,
-                              )
-                            }
-                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
-                          >
-                            <ChevronRight size={16} />
-                          </button>
-                          <span className="absolute right-2.5 top-2.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">
-                            {Math.min(
-                              previewMediaIndex + 1,
-                              previewMediaUrls.length,
-                            )}
-                            /{previewMediaUrls.length}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-slate-100 px-6 text-center text-xs text-slate-500">
-                      <ImagePlus size={24} className="text-slate-400" />
-                      <span>
-                        Aguardando conteúdo. Informe os canais e as mídias
-                        desejadas para visualização.
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Social Action Icons Row */}
-                  <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-2.5 text-slate-700">
-                    <div className="flex items-center gap-3.5">
-                      <Heart size={18} />
-                      <MessageCircle size={18} />
-                      <Send size={18} />
-                    </div>
-                    <Bookmark size={18} />
-                  </div>
-
-                  {/* Card Caption */}
-                  <div className="max-h-36 overflow-y-auto px-3.5 py-2.5">
-                    <p className="whitespace-pre-wrap break-words text-xs leading-5 text-slate-800">
-                      {previewDest?.format === 'story'
-                        ? 'Story: texto incorporado na própria mídia'
-                        : previewPlatform === 'youtube' && previewDest?.youtube
-                          ? `${previewDest.youtube.title}\n${previewDest.youtube.description}`
-                          : previewPlatform === 'tiktok' && tiktokTitle.trim()
-                            ? tiktokTitle
-                            : previewDest?.caption ||
-                              caption ||
-                              'A legenda da sua publicação aparecerá aqui...'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+              )}
+            </section>
           </div>
         </fieldset>
 
@@ -2304,17 +2294,8 @@ function PostModalContent({
                   Duplicar
                 </button>
               </>
-            ) : (
-              <span className="text-xs text-slate-400">
-                {selectedPlatforms.length === 0
-                  ? 'Selecione os canais e adicione o conteúdo'
-                  : `${selectedPlatforms.length} ${
-                      selectedPlatforms.length === 1
-                        ? 'canal selecionado'
-                        : 'canais selecionados'
-                    } · Agendado para ${scheduledDate} às ${time}`}
-              </span>
-            )}
+            ) : null}
+            {!lockedPost && <span className="text-xs text-slate-400">{profileCount} {profileCount === 1 ? 'perfil' : 'perfis'} · {useCustomSchedulePerNetwork ? 'Horários por rede' : `${scheduledDate.split('-').reverse().join('/')} às ${time}`} · {timeZone}</span>}
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
@@ -2393,8 +2374,14 @@ function PostModalContent({
                   ? 'O envio será iniciado imediatamente para todos os canais selecionados.'
                   : useCustomSchedulePerNetwork
                     ? 'A publicação será agendada respeitando os horários personalizados de cada canal.'
-                    : `Agendado para ${scheduledDate} às ${time} (${timeZone}) em todas as redes selecionadas.`}
+                    : 'Confira os perfis e o horário de envio.'}
               </p>
+              <ul className="mt-3 space-y-1 text-sm">
+                {destinations.filter(d => selectedPlatforms.includes(d.platform)).map(d => {
+                  const local = useCustomSchedulePerNetwork && d.scheduledFor ? getDateTimeInputValues(d.scheduledFor, timeZone) : { date: scheduledDate, time };
+                  return <li key={d.platform}>{platforms.find(p => p.id === d.platform)?.label} · {accounts.find(a => a.id === d.accountId)?.name || 'Perfil padrão'}{!confirmScheduleModal.publishNow && ` · ${local.date.split('-').reverse().join('/')} às ${local.time} (${timeZone})`}</li>;
+                })}
+              </ul>
               <div className="mt-6 flex items-center justify-center gap-3">
                 <button
                   type="button"

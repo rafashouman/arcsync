@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import PostSummary from './PostSummary';
+import PublicationDetails from './PublicationDetails';
+import { calendarDays } from '@/src/libs/calendarSummary';
 import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
@@ -14,52 +17,19 @@ import {
   Plus,
   Search,
 } from 'lucide-react';
-import {
-  InstagramIcon,
-  FacebookIcon,
-  TikTokIcon,
-  YoutubeIcon,
-} from '@/src/components/icons/SocialIcons';
+import CalendarWeek from './CalendarWeek';
+import { platformDetails, PlatformBadges } from './CalendarBadges';
 import { processDuePostsAction, reschedulePostToDay } from '@/src/app/actions/postActions';
 import { useSchedulerStore } from '@/src/store/useSchedulerStore';
 import {
+  getDateTimeInputValues,
   formatZonedDate,
   formatZonedTime,
   getZonedDateTimeParts,
   isValidTimeZone,
   rescheduleIsoToCalendarDay,
 } from '@/src/libs/timeZones';
-import type { PostRecord, PostStatus, SocialPlatform } from '@/src/types/post';
-
-const platformDetails: Record<
-  SocialPlatform,
-  { label: string; icon: typeof InstagramIcon; color: string }
-> = {
-  instagram: {
-    label: 'Instagram',
-    icon: InstagramIcon,
-    color: 'text-pink-300 bg-pink-400/10 border-pink-400/20',
-  },
-  tiktok: {
-    label: 'TikTok',
-    icon: TikTokIcon,
-    color: 'text-cyan-200 bg-cyan-400/10 border-cyan-400/20',
-  },
-  facebook: {label:'Facebook',icon:FacebookIcon, color:'text-blue-300',},
-  youtube: {
-    label: 'YouTube',
-    icon: YoutubeIcon,
-    color: 'text-red-300 bg-red-400/10 border-red-400/20',
-  },
-};
-
-const statusDetails = {
-  draft: { label: 'Rascunho', color: 'text-slate-300 bg-slate-400/10' },
-  pending: { label: 'Agendado', color: 'text-indigo-200 bg-indigo-400/10' },
-  processing: { label: 'Publicando', color: 'text-amber-200 bg-amber-400/10' },
-  published: { label: 'Publicado', color: 'text-emerald-200 bg-emerald-400/10' },
-  failed: { label: 'Falhou', color: 'text-rose-200 bg-rose-400/10' },
-} as const;
+import type { PostRecord, SocialPlatform } from '@/src/types/post';
 
 const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 const monthNames = [
@@ -87,94 +57,35 @@ function getPostDate(post: PostRecord) {
   return post.scheduledFor ? new Date(post.scheduledFor) : new Date();
 }
 
-function PlatformBadges({
-  platforms,
-  statuses = [],
-}: {
-  platforms: SocialPlatform[];
-  statuses?: PostRecord['platformStatuses'];
-}) {
-  const stateLabels = {
-    uploading: 'Enviando',
-    processing: 'Processando',
-    published: 'Publicado',
-    failed: 'Falhou',
-  } as const;
-  const stateColors = {
-    uploading: 'bg-amber-300',
-    processing: 'bg-amber-300',
-    published: 'bg-emerald-300',
-    failed: 'bg-rose-300',
-  } as const;
-
-  return (
-    <span className="flex items-center gap-1">
-      {platforms.map((platform) => {
-        const { icon: Icon, label, color } = platformDetails[platform];
-        const status = statuses?.find((item) => item.platform === platform);
-        const statusLabel = status
-          ? `${status.mayHaveSucceeded ? 'Resultado incerto; ' : ''}${stateLabels[status.state]}${status.error ? `: ${status.error}` : ''}`
-          : 'Agendado';
-        return (
-          <span
-            key={platform}
-            className={`relative inline-flex h-6 w-6 items-center justify-center rounded-full border ${color}`}
-            title={`${label} — ${statusLabel}`}
-            aria-label={`${label}: ${statusLabel}`}
-          >
-            <Icon size={13} />
-            {status && (
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-[#11151f] ${stateColors[status.state]}`}
-              />
-            )}
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
-function StatusBadge({ post }: { post: PostRecord }) {
-  const details =
-    post.approvalStatus === 'pending'
-      ? {
-          label: 'Aguardando aprovação',
-          color: 'text-amber-100 bg-amber-300/10',
-        }
-      : post.approvalStatus === 'rejected'
-        ? {
-            label: 'Ajustes solicitados',
-            color: 'text-rose-100 bg-rose-400/10',
-          }
-        : statusDetails[post.status];
-  return (
-    <span
-      title={
-        post.errorLog
-          ? `${post.publishMayHaveSucceeded ? 'Resultado incerto: ' : ''}${post.errorLog}`
-          : undefined
-      }
-      className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${details.color}`}
-    >
-      {details.label}
-    </span>
-  );
-}
-
 export default function SchedulingCalendar({
+  initialFilter, names,
   posts = [],
   canCreatePosts = true,
 }: {
+  initialFilter: string;
+  names: Record<string,string>;
   posts?: PostRecord[];
   canCreatePosts?: boolean;
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [now, setNow] = useState(() => new Date());
   const [platformFilter, setPlatformFilter] = useState<SocialPlatform | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<PostStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState(initialFilter);
   const [searchQuery, setSearchQuery] = useState('');
-  const [view, setView] = useState<'calendar' | 'list'>('calendar');
+  const [preferredView, setPreferredView] = useState<'calendar' | 'list' | null>(initialFilter === 'all' ? null : 'list');
+  useEffect(() => {
+    if (initialFilter !== 'all') return;
+    let stored;
+    try { stored = localStorage.getItem('arcsync-calendar-view'); } catch {}
+    const initial = stored === 'list' || stored === 'calendar' ? stored : window.matchMedia('(max-width: 767px)').matches ? 'list' : 'calendar';
+    const frame = requestAnimationFrame(() => setPreferredView(initial));
+    return () => cancelAnimationFrame(frame);
+  }, [initialFilter]);
+  const view = preferredView;
+  function setView(value: 'calendar' | 'list') {
+    setPreferredView(value);
+    try { localStorage.setItem('arcsync-calendar-view', value); } catch {}
+  }
   const [draggedPostId, setDraggedPostId] = useState<string | null>(null);
   const [rescheduleMessage, setRescheduleMessage] = useState('');
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -217,7 +128,7 @@ export default function SchedulingCalendar({
           const matchesPlatform =
             platformFilter === 'all' || post.platforms.includes(platformFilter);
           const matchesStatus =
-            statusFilter === 'all' || post.status === statusFilter;
+            statusFilter === 'all' || post.status === statusFilter || (statusFilter === 'attention' && (post.status === 'failed' || post.publishMayHaveSucceeded));
           const normalizedQuery = searchQuery.trim().toLocaleLowerCase('pt-BR');
           const searchableText = [
             post.caption,
@@ -261,14 +172,33 @@ export default function SchedulingCalendar({
   const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = now;
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 6) % 7);
+  const currentWeek = calendarDays(weekStart, 0, 6);
   const monthPosts = scheduledPosts.filter((post) => {
     const date = getZonedDateTimeParts(post.scheduledFor, getPostTimeZone(post));
     return date.year === year && date.month - 1 === month;
   });
+  const allDates = statusFilter !== 'all' && view === 'list';
+  const todayKey = getDateTimeInputValues(now, Intl.DateTimeFormat().resolvedOptions().timeZone).date;
+  const groups = new Map<string, PostRecord[]>();
+  for (const post of view !== 'list' ? [] : allDates ? visiblePosts : monthPosts) {
+    const day = post.scheduledFor ? getDateTimeInputValues(post.scheduledFor, getPostTimeZone(post)).date : 'Sem data';
+    const group = groups.get(day) ?? [];
+    group.push(post);
+    groups.set(day, group);
+  }
+  const orderedDays = [...groups.keys()].sort();
+  const renderDay = (day: string) => <section className="agenda-day" key={day}>
+    <h3>{day === todayKey ? 'Hoje' : day === 'Sem data' ? day : new Date(day + 'T12:00:00').toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'})}</h3>
+    {groups.get(day)?.slice().sort((a,b) => (a.scheduledFor ?? '').localeCompare(b.scheduledFor ?? '')).map(post =>
+      canCreatePosts ? <button type="button" className="agenda-entry" key={post._id} onClick={() => openModal(getPostDate(post), post)}><PostSummary post={post} names={names}/></button>
+        : <article className="agenda-entry" key={post._id}><PostSummary post={post} names={names}/></article>)}
+  </section>;
+  const pastDays = orderedDays.filter(day => day < todayKey && !allDates && month === now.getMonth() && year === now.getFullYear());
   const scheduledCount = posts.filter((post) => post.status === 'pending').length;
   const draftCount = posts.filter((post) => post.status === 'draft').length;
   const publishedCount = posts.filter((post) => post.status === 'published').length;
-  const failedCount = posts.filter((post) => post.status === 'failed').length;
+  const failedCount = posts.filter((post) => post.status === 'failed' || post.publishMayHaveSucceeded).length;
   const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
   const blanks = Array.from({ length: firstDay }, (_, index) => index);
   const trailingBlanks = Array.from(
@@ -330,7 +260,7 @@ export default function SchedulingCalendar({
 
   return (
     <section id="calendar" className="space-y-6">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="hidden gap-3 md:grid md:grid-cols-4">
         <div className="flex items-center gap-4 rounded-2xl border border-indigo-400/15 bg-gradient-to-br from-indigo-400/[0.09] to-transparent p-4">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-400/10 text-indigo-300">
             <Clock3 size={20} />
@@ -369,7 +299,15 @@ export default function SchedulingCalendar({
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <section className="dashboard-panel hidden md:block" aria-labelledby="current-week-title">
+        <h2 id="current-week-title" className="text-lg font-semibold">Semana atual</h2>
+        <p className="dashboard-muted mt-1 text-sm">Passe o mouse, use o teclado ou toque em um dia para ver os detalhes. Os filtros também se aplicam aqui.</p>
+        <CalendarWeek days={currentWeek} now={now} posts={visiblePosts}
+          onEdit={canCreatePosts ? post => openModal(getPostDate(post), post) : undefined}
+          onCreate={canCreatePosts ? day => openModal(day) : undefined}
+        />
+      </section>
+      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-w-0 rounded-2xl border border-white/[0.07] bg-[#11151f] p-4 shadow-xl shadow-black/10 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
@@ -378,10 +316,10 @@ export default function SchedulingCalendar({
               </span>
               <div>
                 <h2 className="text-lg font-semibold capitalize text-white">
-                  {monthNames[month]} <span className="font-normal text-slate-500">{year}</span>
+                  {allDates ? 'Agenda' : monthNames[month]} <span className="font-normal text-slate-500">{!allDates && year}</span>
                 </h2>
                 <p className="text-xs text-slate-500">
-                  {monthPosts.length} {monthPosts.length === 1 ? 'post neste mês' : 'posts neste mês'}
+                  {allDates ? `${visiblePosts.length} publicações · todas as datas` : `${monthPosts.length} publicações neste mês`}
                 </p>
               </div>
             </div>
@@ -421,7 +359,7 @@ export default function SchedulingCalendar({
                 aria-label="Filtrar por status"
                 value={statusFilter}
                 onChange={(event) =>
-                  setStatusFilter(event.target.value as PostStatus | 'all')
+                  setStatusFilter(event.target.value)
                 }
                 className="h-9 rounded-lg border border-white/10 bg-[#171c28] px-3 text-xs text-slate-300 outline-none transition focus:border-indigo-400/50"
               >
@@ -430,6 +368,7 @@ export default function SchedulingCalendar({
                 <option value="pending">Agendados</option>
                 <option value="processing">Publicando</option>
                 <option value="published">Publicados</option>
+                <option value="attention">Precisam de atenção</option>
                 <option value="failed">Falhas</option>
               </select>
 
@@ -445,7 +384,7 @@ export default function SchedulingCalendar({
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <CalendarDays size={15} />
+                  <CalendarDays size={15} className="inline"/> Mês
                 </button>
                 <button
                   type="button"
@@ -458,7 +397,7 @@ export default function SchedulingCalendar({
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <List size={15} />
+                  <List size={15} className="inline"/> Agenda
                 </button>
               </div>
 
@@ -469,13 +408,13 @@ export default function SchedulingCalendar({
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-indigo-500 px-3.5 text-xs font-semibold text-white shadow-lg shadow-indigo-950/30 transition hover:bg-indigo-400"
                 >
                   <Plus size={15} />
-                  Novo post
+                  Nova publicação
                 </button>
               )}
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-white/[0.06] pt-4">
+          <div className={`${allDates ? 'hidden' : 'flex'} mt-6 items-center justify-between border-t border-white/[0.06] pt-4`}>
             <button
               type="button"
               onClick={() => changeMonth(-1)}
@@ -521,7 +460,7 @@ export default function SchedulingCalendar({
 
           {view === 'calendar' ? (
             <div className="mt-4 overflow-x-auto">
-              <div className="min-w-[650px]">
+              <div className="min-w-[980px]">
                 <div className="mb-2 grid grid-cols-7">
                   {weekDays.map((day) => (
                     <div
@@ -536,7 +475,7 @@ export default function SchedulingCalendar({
                   {blanks.map((index) => (
                     <div
                       key={`blank-${index}`}
-                      className="min-h-[104px] rounded-xl bg-white/[0.015]"
+                      className="min-h-[170px] rounded-xl bg-white/[0.015]"
                     />
                   ))}
                   {days.map((day) => {
@@ -567,7 +506,7 @@ export default function SchedulingCalendar({
                           const postId = event.dataTransfer.getData('text/plain');
                           void handleDropOnDay(postId, day);
                         }}
-                        className="group relative min-h-[104px] rounded-xl border border-white/[0.055] bg-[#171c28]/70 p-1.5 transition hover:border-indigo-400/30 hover:bg-[#1a2030] sm:p-2"
+                        className={`group relative ${currentWeek.some(date => date.getDate() === day && date.getMonth() === month && date.getFullYear() === year) ? 'min-h-[240px] ring-1 ring-indigo-400/40' : 'min-h-[170px]'} rounded-xl border border-white/[0.055] bg-[#171c28]/70 p-1.5 transition hover:border-indigo-400/30 hover:bg-[#1a2030] sm:p-2`}
                       >
                         <button
                           type="button"
@@ -587,12 +526,13 @@ export default function SchedulingCalendar({
                             type="button"
                             aria-label={`Adicionar post em ${day}`}
                             onClick={() => openModal(new Date(year, month, day))}
-                            className="absolute right-1.5 top-1.5 rounded-md p-1 text-slate-500 opacity-0 transition hover:bg-indigo-400/15 hover:text-indigo-200 group-hover:opacity-100"
+                            className="absolute right-1.5 top-1.5 rounded-md p-1 text-slate-500 opacity-0 transition hover:bg-indigo-400/15 hover:text-indigo-200 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
                           >
                             <Plus size={13} />
                           </button>
                         )}
-                        <div className="mt-1 flex max-h-[58px] flex-col gap-1 overflow-y-auto custom-scrollbar">
+                        <PublicationDetails label={`${day} de ${monthNames[month]}`} posts={dayPosts} onEdit={canCreatePosts ? post => openModal(getPostDate(post), post) : undefined}/>
+                        <div className="mt-1 flex max-h-[130px] flex-col gap-1 overflow-y-auto custom-scrollbar">
                           {dayPosts.map((post) => {
                             const statusColor =
                               post.status === 'failed'
@@ -614,13 +554,12 @@ export default function SchedulingCalendar({
                                 disabled={!canCreatePosts}
                                 onClick={() => openModal(new Date(post.scheduledFor), post)}
                                 title={`${formatZonedTime(post.scheduledFor, getPostTimeZone(post))} · ${post.caption || 'Sem legenda'} · ${getPostTimeZone(post)}`}
-                                className={`w-full truncate rounded-md border px-1.5 py-1 text-left text-[10px] transition hover:brightness-125 ${statusColor}`}
+                                className={`flex w-full flex-wrap items-center gap-1 rounded-md border px-1.5 py-1 text-left text-xs transition hover:brightness-125 ${statusColor}`}
                               >
                                 <span className="font-semibold">
                                   {formatZonedTime(post.scheduledFor, getPostTimeZone(post))}
                                 </span>
-                                {' · '}
-                                {post.caption || 'Sem legenda'}
+                                <PlatformBadges platforms={post.platforms} statuses={post.platformStatuses}/>
                               </button>
                             );
                           })}
@@ -631,71 +570,23 @@ export default function SchedulingCalendar({
                   {trailingBlanks.map((index) => (
                     <div
                       key={`trailing-${index}`}
-                      className="min-h-[104px] rounded-xl bg-white/[0.015]"
+                      className="min-h-[170px] rounded-xl bg-white/[0.015]"
                     />
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="mt-5 divide-y divide-white/[0.06]">
-              {scheduledPosts.length === 0 ? (
-                <p className="py-12 text-center text-sm text-slate-500">
-                  {canCreatePosts
-                    ? 'Nenhum post agendado para exibir. Crie um agendamento ou consulte seus rascunhos.'
-                    : 'Nenhum post agendado para exibir.'}
-                </p>
-              ) : (
-                [...scheduledPosts]
-                  .sort(
-                    (a, b) =>
-                      new Date(a.scheduledFor).getTime() -
-                      new Date(b.scheduledFor).getTime(),
-                  )
-                  .map((post) => (
-                    <button
-                      type="button"
-                      key={post._id}
-                      disabled={!canCreatePosts}
-                      onClick={() => openModal(getPostDate(post), post)}
-                      className="flex w-full items-center gap-3 py-3 text-left transition hover:bg-white/[0.025] sm:gap-4"
-                    >
-                      <div className="min-w-[72px] text-xs text-slate-500">
-                        <p>{formatZonedDate(post.scheduledFor, getPostTimeZone(post))}</p>
-                        <p className="mt-1 font-medium text-slate-300">
-                          {formatZonedTime(post.scheduledFor, getPostTimeZone(post))}
-                        </p>
-                        <p className="mt-1 text-[9px] text-slate-600">
-                          {getPostTimeZone(post)}
-                        </p>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-200">
-                          {post.caption || 'Post sem legenda'}
-                        </p>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <PlatformBadges
-                            platforms={post.platforms}
-                            statuses={post.platformStatuses}
-                          />
-                          <StatusBadge post={post} />
-                        </div>
-                        {post.errorLog && (
-                          <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-rose-200/75">
-                            {post.publishMayHaveSucceeded && 'Resultado incerto: '}
-                            {post.errorLog}
-                          </p>
-                        )}
-                      </div>
-                      <ChevronRight size={16} className="text-slate-600" />
-                    </button>
-                  ))
-              )}
+            <div className="mt-4">
+              {pastDays.length > 0 && <details><summary className="dashboard-link cursor-pointer py-2 text-sm">Ver dias anteriores</summary>{pastDays.map(renderDay)}</details>}
+              {!allDates && month === now.getMonth() && year === now.getFullYear() && !groups.has(todayKey) && <p className="dashboard-muted py-3 text-sm">Hoje · Nenhuma publicação.</p>}
+              {orderedDays.filter(day => !pastDays.includes(day)).map(renderDay)}
+              {!orderedDays.length && <p className="dashboard-muted py-4 text-sm">Nenhuma publicação para este período e filtros.</p>}
             </div>
           )}
         </div>
 
-        <aside className="rounded-2xl border border-white/[0.07] bg-[#11151f] p-5">
+        <aside hidden={allDates} className="rounded-2xl border border-white/[0.07] bg-[#11151f] p-5">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-white">Próximos posts</h3>

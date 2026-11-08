@@ -11,10 +11,11 @@ import {
   getYouTubeAnalytics,
   type YouTubeAnalyticsResult,
 } from '@/src/libs/youtubeAnalytics';
+import { SocialBadges } from '@/src/components/PublicationDetails';
 import type { PostRecord, SocialPlatform } from '@/src/types/post';
 
 export const metadata: Metadata = {
-  title: 'Analytics | Arcsync',
+  title: 'Estatísticas | ArcSync',
   description: 'Acompanhe publicações e métricas disponíveis no Arcsync.',
 };
 
@@ -81,7 +82,7 @@ function PlatformActivity({
 
   return (
     <article className="rounded-2xl border border-white/[0.07] bg-[#11151f] p-5">
-      <h2 className="font-semibold text-white">{label}</h2>
+      <h2 className="flex items-center gap-3 font-semibold text-white"><SocialBadges post={{ platforms: [platform] }}/>{label}</h2>
       <dl className="mt-4 grid grid-cols-3 gap-3">
         <div>
           <dt className="text-[11px] text-slate-500">Publicados</dt>
@@ -96,6 +97,9 @@ function PlatformActivity({
           <dd className="mt-1 text-xl font-semibold text-rose-200">{failed}</dd>
         </div>
       </dl>
+      <div className="activity-bar" aria-label={`${published} publicados, ${scheduled} agendados, ${failed} falhas`}>
+        {published + scheduled + failed > 0 ? <><span style={{ flex: published }} className="bg-emerald-400"/><span style={{ flex: scheduled }} className="bg-indigo-400"/><span style={{ flex: failed }} className="bg-rose-400"/></> : <span className="bg-slate-600 flex-1"/>}
+      </div>
       <p className="mt-4 border-t border-white/[0.06] pt-3 text-xs leading-5 text-slate-500">
         Contagem das publicações registradas pelo Arcsync; não representa alcance
         ou engajamento.
@@ -186,7 +190,7 @@ async function AnalyticsContent() {
 
   return (
     <main className="min-h-screen px-4 py-6 text-slate-200 sm:px-7 sm:py-9">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex items-center justify-between gap-4">
           <Link
             href="/"
@@ -202,7 +206,7 @@ async function AnalyticsContent() {
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">
             {workspace.workspaceName}
           </p>
-          <h1 className="mt-2 text-2xl font-semibold text-white">Analytics</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-white">Estatísticas</h1>
           <p className="mt-2 text-sm text-slate-400">
             Atividade do calendário e métricas de desempenho liberadas pelas
             contas conectadas.
@@ -227,7 +231,16 @@ async function AnalyticsContent() {
           </div>
         </section>
 
-        <section aria-label="Atividade por rede social" className="grid gap-4 md:grid-cols-3">
+        <section className="dashboard-panel mb-6" aria-labelledby="attention-title">
+          <h2 id="attention-title" className="text-lg font-semibold">O que precisa da sua atenção</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <Link href="/approvals" className="dashboard-link">{posts.filter(post => post.approvalStatus === 'pending').length} aguardando aprovação →</Link>
+            <Link href="/calendar" className="dashboard-link">{posts.filter(post => post.status === 'draft').length} rascunhos para planejar →</Link>
+            <Link href="/monitoring" className="dashboard-link">{failedCount} falhas para revisar →</Link>
+          </div>
+        </section>
+        <h2 className="mb-4 text-lg font-semibold text-white">Atividade por rede social</h2>
+        <section aria-label="Atividade por rede social" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {platforms.map((platform) => (
             <PlatformActivity
               key={platform.id}
@@ -236,11 +249,8 @@ async function AnalyticsContent() {
               label={platform.label}
             />
           ))}
-          <PlatformActivity
-            posts={posts}
-            platform="youtube"
-            label="YouTube"
-          />
+          <PlatformActivity posts={posts} platform="youtube" label="YouTube" />
+          <PlatformActivity posts={posts} platform="facebook" label="Facebook" />
         </section>
 
         <section aria-labelledby="performance-title" className="mt-8 space-y-4">
@@ -278,7 +288,7 @@ export default function AnalyticsPage() {
     <Suspense
       fallback={
         <main className="flex min-h-screen items-center justify-center text-sm text-slate-500">
-          Carregando analytics...
+          Carregando estatísticas...
         </main>
       }
     >

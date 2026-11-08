@@ -56,6 +56,7 @@ export interface YouTubeOptions {
 export interface PostHistoryEntry { at: string; event: string; runId?: string; states?: { platform: string; state: string }[]; }
 
 export interface PostRecord {
+  updatedAt?: string;
   deletedAt?: string;
   history?: PostHistoryEntry[];
   destinations?: PostDestination[];
