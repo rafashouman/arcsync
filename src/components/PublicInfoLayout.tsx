@@ -19,7 +19,7 @@ async function PublicInfoContent({title, children}: {title:string; children:Reac
       {operator && <p>Responsável: {operator}</p>}
       {validContact && <p>Contato: <a className="underline" href={`mailto:${contact}`}>{contact}</a></p>}
       <nav className="flex flex-wrap gap-4" aria-label="Informações públicas">
-        <Link href="/about">Sobre</Link><Link href="/privacy">Privacidade</Link><Link href="/terms">Termos</Link><Link href="/support">Suporte</Link><Link href="/data-deletion">Exclusão de dados</Link><Link href="/login">Entrar</Link>
+        <Link href="/about">Sobre</Link><Link href="/privacy">Privacidade</Link><Link href="/terms-service">Termos</Link><Link href="/support">Suporte</Link><Link href="/data-deletion">Exclusão de dados</Link><Link href="/login">Entrar</Link>
       </nav>
     </footer>
   </main>;

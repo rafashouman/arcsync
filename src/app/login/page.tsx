@@ -32,7 +32,7 @@ async function LoginContent({
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <AuthForm redirectTo={redirectTo} />
-        <nav className="mt-5 flex flex-wrap justify-center gap-4 text-xs text-slate-400" aria-label="Informações públicas"><Link href="/about">Sobre</Link><Link href="/privacy">Privacidade</Link><Link href="/terms">Termos</Link><Link href="/support">Suporte</Link></nav>
+        <nav className="mt-5 flex flex-wrap justify-center gap-4 text-xs text-slate-400" aria-label="Informações públicas"><Link href="/about">Sobre</Link><Link href="/privacy">Privacidade</Link><Link href="/terms-service">Termos</Link><Link href="/support">Suporte</Link></nav>
         <p className="mt-5 text-center text-[11px] leading-5 text-slate-600">
           Suas publicações e arquivos são privados e vinculados à sua conta.
         </p>

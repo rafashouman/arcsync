@@ -23,7 +23,7 @@ Acrescentar os caminhos abaixo à origem HTTPS definitiva. O domínio do e-mail 
 |---|---|
 | Apresentação pública | `/about` |
 | Privacidade | `/privacy` |
-| Termos | `/terms` |
+| Termos | `/terms-service` |
 | Contato | `/support` |
 | Instruções de exclusão | `/data-deletion` |
 | Retorno Google/YouTube | `/api/social/youtube/callback` |
@@ -94,7 +94,7 @@ Roteiro: autorizar Páginas no login Meta; mostrar as Páginas conectadas; selec
 | Nome e contato públicos | Preenchidos com os dados informados |
 | Descrição, permissões e roteiros | Preparados neste documento |
 | Páginas públicas locais | Implementadas; conteúdo operacional precisa refletir o serviço efetivamente oferecido |
-| Retenção, fornecedores e atendimento de exclusão | Definir com o responsável antes de enviar políticas aos revisores; não há prazo automático implementado |
+| Retenção, fornecedores e atendimento de exclusão | Definir com o responsável antes de enviar políticas aos revisores; pedidos de exclusão são manuais e não há prazo automático implementado |
 | Domínio HTTPS e comprovação de propriedade | Adiados por instrução do usuário |
 | Credenciais, usuários/canais de teste e acesso do revisor | Etapa final; não incluir senhas neste documento |
 | Gravações com conexão/publicação real | Etapa final |

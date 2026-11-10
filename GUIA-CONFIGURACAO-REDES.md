@@ -192,7 +192,7 @@ Resultado esperado: cada rede anuncia sucesso somente após o fluxo corresponden
 
 ## 9. Páginas públicas já disponíveis
 
-Cadastre URLs do domínio real com estes caminhos: `/about`, `/privacy`, `/terms`, `/support`, `/data-deletion`. Preencha `LEGAL_OPERATOR_NAME` e `SUPPORT_EMAIL`; os valores são lidos em execução, após reiniciar o serviço. Os textos descrevem o funcionamento implementado e precisam de revisão do responsável, incluindo fornecedores, retenção e atendimento aos pedidos. A exclusão de dados é um pedido manual ao suporte; não há promessa de apagamento automático nem callback Meta de exclusão nesta versão. Não submeta dados fictícios à revisão.
+Cadastre URLs do domínio real com estes caminhos: `/about`, `/privacy`, `/terms-service`, `/support`, `/data-deletion`. Preencha `LEGAL_OPERATOR_NAME` e `SUPPORT_EMAIL`; os valores são lidos em execução, após reiniciar o serviço. Os textos descrevem o funcionamento implementado e precisam de revisão do responsável, incluindo fornecedores, retenção e atendimento aos pedidos. A exclusão de dados é um pedido manual ao suporte; não há promessa de apagamento automático nem callback Meta de exclusão nesta versão. Não submeta dados fictícios à revisão.
 
 Material de cadastro e roteiros de revisão: `APROVACAO-REDES.md`. Nome/contato preenchidos conforme informado; domínio de e-mail não define automaticamente o domínio HTTPS do app.
 
