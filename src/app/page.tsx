@@ -42,8 +42,8 @@ async function Dashboard() {
     <header className="flex flex-wrap items-center justify-between gap-3 py-5"><span className="dashboard-muted text-sm">{workspace.workspaceName}</span><SignOutButton email={user.email}/></header>
     <section className={styles.hero} aria-labelledby="home-headline">
       <div className={styles.intro}>
-        <h1 id="home-headline">Boas ideias merecem<br/><span>ganhar o mundo.</span></h1>
-        <p>{posts.length ? 'Organize seus conteúdos, acompanhe as publicações e planeje os próximos passos da sua presença nas redes.' : connect ? 'Conecte o primeiro perfil para preparar sua publicação.' : connections.accounts.length ? `Perfil conectado: ${connections.accounts[0].name}. Sua agenda começa aqui.` : connections.error || 'Acompanhe aqui as publicações da equipe.'}</p>
+        <h1 id="home-headline">Você cria.<br/><span>Nós publicamos.</span></h1>
+        <p>{posts.length ? 'Organize seus conteúdos, programe suas postagens e deixe que nós cuidaremos das publicações por você.' : connect ? 'Conecte o primeiro perfil, agende suas postagens e nós cuidamos do resto' : connections.accounts.length ? `Perfil conectado: ${connections.accounts[0].name}. Sua agenda começa aqui.` : connections.error || 'Acompanhe aqui as publicações da equipe.'}</p>
         {!posts.length && connect ? <Link className="dashboard-primary" href="/settings/accounts">Conectar uma rede <ArrowUpRight size={16}/></Link> : create ? <PostButton className="dashboard-primary">{posts.length ? 'Nova publicação' : 'Criar primeira publicação'} <ArrowUpRight size={16}/></PostButton> : <Link href="/calendar" className="dashboard-primary">Ver agenda <ArrowUpRight size={16}/></Link>}
       </div>
       <div aria-hidden="true" className={styles.orbit}>
