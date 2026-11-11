@@ -58,7 +58,9 @@ export async function readAuthJson(request: Request) {
 }
 
 export function authJsonResponse(
-  body: { error: string } | { success: true },
+  body:
+    | { error: string; code?: string }
+    | { success: true; verificationRequired?: boolean },
   status = 200,
   extraHeaders?: HeadersInit,
 ) {

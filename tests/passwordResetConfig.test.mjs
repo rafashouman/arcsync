@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  getEmailVerificationUrl,
   getPasswordResetUrl,
   getSmtpConfiguration,
 } from '../src/libs/passwordResetConfig.ts';
@@ -81,6 +82,30 @@ test('builds reset links only for secure public origins and local development', 
   );
   assert.equal(
     getPasswordResetUrl('invalid', {
+      PUBLIC_APP_URL: 'https://arcsync.example',
+      NODE_ENV: 'production',
+    }),
+    null,
+  );
+});
+
+test('builds email verification links only for secure public origins', () => {
+  assert.equal(
+    getEmailVerificationUrl(token, {
+      PUBLIC_APP_URL: 'https://arcsync.example/app',
+      NODE_ENV: 'production',
+    }),
+    `https://arcsync.example/verify-email?token=${token}`,
+  );
+  assert.equal(
+    getEmailVerificationUrl(token, {
+      PUBLIC_APP_URL: 'http://arcsync.example',
+      NODE_ENV: 'production',
+    }),
+    null,
+  );
+  assert.equal(
+    getEmailVerificationUrl('invalid', {
       PUBLIC_APP_URL: 'https://arcsync.example',
       NODE_ENV: 'production',
     }),

@@ -33,10 +33,12 @@ desenvolvimento. Para parar sem apagar dados, use `docker compose down`.
    autenticação e persistência de usuários, sessões, posts e contas. No Docker
    local, o Compose já aponta o app para o serviço MongoDB `mongo`; não use a
    URI `localhost` do desenvolvimento em produção.
-2. Para permitir recuperação de senha, configure `SMTP_HOST`, `SMTP_PORT`,
-   `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM`. `PUBLIC_APP_URL` deve apontar
-   para a origem pública do app (HTTPS em produção); o link de redefinição é
-   enviado por e-mail, expira em uma hora e pode ser usado uma única vez.
+2. Para permitir verificação de e-mail no cadastro e recuperação de senha,
+   configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` e
+   `SMTP_FROM`. `PUBLIC_APP_URL` deve apontar para a origem pública do app
+   (HTTPS em produção). O link de verificação expira em 24 horas e exige
+   confirmação explícita na página; o link de redefinição de senha expira em
+   uma hora e pode ser usado uma única vez.
    Use `SMTP_PORT=587` para SMTP com STARTTLS ou `465` para TLS implícito.
 3. Para publicar posts do Instagram, configure também `PUBLIC_APP_URL` com a
    URL HTTPS pública do app, `MEDIA_URL_SIGNING_KEY` com uma chave aleatória
@@ -77,8 +79,9 @@ fora do repositório. A fila publica no Instagram ou YouTube quando as
 credenciais correspondentes estão configuradas. O cadastro e o login usam a
 instância MongoDB isolada do Arcsync; senhas são armazenadas com scrypt e as
 sessões são tokens aleatórios guardados em cookies `httpOnly`, com seus hashes
-no banco. A recuperação de senha por e-mail está implementada; configure as
-variáveis SMTP no `.env.production` para habilitá-la neste ambiente.
+no banco. O cadastro exige confirmação por e-mail; contas anteriores à mudança
+continuam podendo entrar. Verificação e recuperação de senha usam as variáveis
+SMTP e `PUBLIC_APP_URL` do `.env.production`.
 
 ### Deploy de homologação pelo GitHub
 
@@ -211,10 +214,12 @@ iniciar o upload; arquivos sem metadados de duração válidos são recusados.
 
 O MongoDB armazena as contas de e-mail/senha; as senhas usam scrypt e o servidor
 mantém tokens de sessão aleatórios em cookies `httpOnly`, `SameSite=Lax`, com
-validade de cinco dias. Apenas o hash do token fica no banco. Cada leitura,
+validade de cinco dias. Cadastros novos exigem confirmação de e-mail por link
+válido por 24 horas; o link só é consumido após confirmação explícita na página.
+Contas criadas antes desse fluxo continuam válidas. Apenas o hash do token de
+sessão e dos tokens de verificação fica no banco. Cada leitura,
 criação, alteração ou exclusão de post verifica a sessão e limita as consultas
-ao workspace ativo do usuário autenticado. O cadastro é aberto e a verificação
-de e-mail ainda não está disponível. A recuperação usa um token aleatório
+ao workspace ativo do usuário autenticado. A recuperação usa um token aleatório
 armazenado apenas como hash, limita solicitações e encerra as sessões existentes
 após a troca de senha; respostas de solicitação não revelam se o endereço está
 cadastrado.

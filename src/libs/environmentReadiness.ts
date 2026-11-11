@@ -202,7 +202,7 @@ export function checkEnvironmentReadiness(
       level: 'error',
       key: 'SMTP',
       message:
-        'Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD e SMTP_FROM para recuperação de senha.',
+        'Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD e SMTP_FROM para verificar cadastro e recuperar senha.',
     });
   }
 

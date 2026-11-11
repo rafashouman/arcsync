@@ -1,12 +1,24 @@
-import { createUser, consumeAuthRateLimit } from '@/src/data/auth';
+import {
+  consumeAuthRateLimit,
+  createEmailVerificationToken,
+  createUser,
+  deleteUnverifiedUser,
+  hashSessionToken,
+} from '@/src/data/auth';
 import { authJsonResponse, getClientIp, isSameOrigin, readAuthJson } from '@/src/libs/authRequest';
-import { createAuthenticatedSession } from '@/src/libs/authSession';
+import {
+  isEmailVerificationEmailConfigured,
+  sendEmailVerification,
+} from '@/src/libs/emailVerificationEmail';
 import {
   getPasswordIssue,
   hashPassword,
   isValidEmail,
   normalizeEmail,
 } from '@/src/libs/passwordAuth';
+import { randomBytes } from 'crypto';
+
+const EMAIL_VERIFICATION_DURATION_MS = 24 * 60 * 60 * 1000;
 
 function isDuplicateKeyError(error: unknown) {
   return (
@@ -48,6 +60,18 @@ export async function POST(request: Request) {
 
   const email = normalizeEmail(parsed.body.email);
   const password = parsed.body.password;
+  if (!isEmailVerificationEmailConfigured()) {
+    console.error(
+      'Cadastro indisponível: SMTP e PUBLIC_APP_URL precisam estar configurados para verificar e-mails.',
+    );
+    return authJsonResponse(
+      { error: 'O cadastro está temporariamente indisponível. Tente novamente mais tarde.' },
+      503,
+    );
+  }
+
+  let userId: string | null = null;
+  let tokenHash: string | null = null;
   try {
     const ipLimit = await consumeAuthRateLimit(
       'register-ip',
@@ -79,16 +103,31 @@ export async function POST(request: Request) {
 
     const passwordHash = await hashPassword(password);
     const user = await createUser(email, passwordHash);
-    await createAuthenticatedSession(String(user._id));
-    return authJsonResponse({ success: true }, 201);
+    userId = String(user._id);
+    const token = randomBytes(32).toString('base64url');
+    tokenHash = hashSessionToken(token);
+    await createEmailVerificationToken(
+      userId,
+      tokenHash,
+      new Date(Date.now() + EMAIL_VERIFICATION_DURATION_MS),
+    );
+    await sendEmailVerification(email, token);
+    return authJsonResponse({ success: true, verificationRequired: true }, 201);
   } catch (error) {
-    if (isDuplicateKeyError(error)) {
+    if (isDuplicateKeyError(error) && !userId) {
       return authJsonResponse(
         { error: 'Este e-mail já possui uma conta.' },
         409,
       );
     }
     console.error('Erro ao criar usuário:', error);
+    if (userId) {
+      try {
+        await deleteUnverifiedUser(userId);
+      } catch (cleanupError) {
+        console.error('Erro ao limpar cadastro não confirmado:', cleanupError);
+      }
+    }
     return authJsonResponse(
       { error: 'Não foi possível criar a conta agora. Tente novamente.' },
       503,

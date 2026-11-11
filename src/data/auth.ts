@@ -4,6 +4,7 @@ import { createHash, createHmac } from 'crypto';
 import { connection } from 'next/server';
 import { connectDB } from '@/src/libs/mongodb';
 import { AuthRateLimit } from '@/src/models/AuthRateLimit';
+import { EmailVerificationToken } from '@/src/models/EmailVerificationToken';
 import { PasswordResetToken } from '@/src/models/PasswordResetToken';
 import { User } from '@/src/models/User';
 import { UserSession } from '@/src/models/UserSession';
@@ -24,12 +25,74 @@ export function hashSessionToken(token: string) {
 
 export async function createUser(email: string, passwordHash: string) {
   await requireDatabase();
-  return User.create({ email, passwordHash });
+  return User.create({ email, passwordHash, emailVerified: false });
 }
 
 export async function findUserForLogin(email: string) {
   await requireDatabase();
   return User.findOne({ email }).select('+passwordHash').lean();
+}
+
+export async function findUnverifiedUser(email: string) {
+  await requireDatabase();
+  const user = await User.findOne({ email, emailVerified: false })
+    .select('_id')
+    .lean();
+  return user ? { userId: String(user._id) } : null;
+}
+
+export async function createEmailVerificationToken(
+  userId: string,
+  tokenHash: string,
+  expiresAt: Date,
+) {
+  await requireDatabase();
+  await EmailVerificationToken.deleteMany({ userId });
+  await EmailVerificationToken.create({ userId, tokenHash, expiresAt });
+}
+
+export async function deleteEmailVerificationToken(
+  userId: string,
+  tokenHash: string,
+) {
+  await requireDatabase();
+  await EmailVerificationToken.deleteOne({ userId, tokenHash });
+}
+
+export async function deleteUnverifiedUser(userId: string) {
+  await requireDatabase();
+  const result = await User.deleteOne({ _id: userId, emailVerified: false });
+  if (result.deletedCount === 1) {
+    await EmailVerificationToken.deleteMany({ userId });
+  }
+  return result.deletedCount === 1;
+}
+
+export async function verifyEmailAddress(tokenHash: string, now = new Date()) {
+  await requireDatabase();
+  const token = await EmailVerificationToken.findOne({
+    tokenHash,
+    expiresAt: { $gt: now },
+  })
+    .select('userId')
+    .lean();
+  if (!token) return false;
+
+  const result = await User.updateOne(
+    { _id: token.userId, emailVerified: false },
+    { $set: { emailVerified: true } },
+  );
+  if (result.matchedCount !== 1) {
+    const alreadyVerified = await User.exists({
+      _id: token.userId,
+      emailVerified: true,
+    });
+    if (!alreadyVerified) {
+      throw new Error('Usuário do token de verificação não foi encontrado.');
+    }
+  }
+  await EmailVerificationToken.deleteMany({ userId: String(token.userId) });
+  return true;
 }
 
 export async function findUserForPasswordReset(email: string) {
@@ -126,8 +189,14 @@ export async function findUserForSession(token: string) {
     .lean();
   if (!session) return null;
 
-  const user = await User.findById(session.userId).select('email').lean();
+  const user = await User.findById(session.userId)
+    .select('email emailVerified')
+    .lean();
   if (!user) {
+    await UserSession.deleteOne({ _id: session._id });
+    return null;
+  }
+  if (user.emailVerified === false) {
     await UserSession.deleteOne({ _id: session._id });
     return null;
   }

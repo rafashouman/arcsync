@@ -50,9 +50,28 @@ export function getPasswordResetUrl(
   token: string,
   env: NodeJS.ProcessEnv = process.env,
 ) {
-  const rawBaseUrl = env.PUBLIC_APP_URL?.trim();
-  if (!rawBaseUrl || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  return getPublicAppUrl(`/reset-password?token=${encodeURIComponent(token)}`, env);
+}
 
+export function getEmailVerificationUrl(
+  token: string,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  return getPublicAppUrl(`/verify-email?token=${encodeURIComponent(token)}`, env);
+}
+
+function getPublicAppUrl(path: string, env: NodeJS.ProcessEnv) {
+  const rawBaseUrl = env.PUBLIC_APP_URL?.trim();
+  if (
+    !rawBaseUrl ||
+    !path.startsWith('/') ||
+    path.startsWith('//') ||
+    path.includes('\\')
+  ) {
+    return null;
+  }
   try {
     const baseUrl = new URL(rawBaseUrl);
     const isLocalDevelopment =
@@ -66,10 +85,7 @@ export function getPasswordResetUrl(
       return null;
     }
 
-    return new URL(
-      `/reset-password?token=${encodeURIComponent(token)}`,
-      baseUrl.origin,
-    ).toString();
+    return new URL(path, baseUrl.origin).toString();
   } catch {
     return null;
   }

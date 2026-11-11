@@ -16,7 +16,7 @@ export default function PrivacyPage() {
         <li><strong>Conta e workspace:</strong> e-mail de acesso, identificadores internos, participação em equipes, convites e permissões.</li>
         <li><strong>Contas sociais:</strong> identificador e nome da conta conectada, permissões concedidas, dados técnicos da autorização e tokens de acesso necessários à integração.</li>
         <li><strong>Conteúdo e publicações:</strong> textos, arquivos de mídia, destino escolhido, configurações, horários, aprovações e estados ou mensagens de resultado do envio.</li>
-        <li><strong>Segurança e suporte:</strong> dados técnicos de sessão, recuperação de senha e informações necessárias para diagnosticar falhas ou responder a solicitações.</li>
+        <li><strong>Segurança e suporte:</strong> dados técnicos de sessão, confirmação de e-mail, recuperação de senha e informações necessárias para diagnosticar falhas ou responder a solicitações.</li>
       </ul>
     </section>
 

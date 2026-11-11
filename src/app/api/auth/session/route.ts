@@ -72,6 +72,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (user.emailVerified === false) {
+      return authJsonResponse(
+        {
+          error: 'Confirme seu e-mail antes de entrar. Você pode solicitar um novo link.',
+          code: 'EMAIL_NOT_VERIFIED',
+        },
+        403,
+      );
+    }
+
     await createAuthenticatedSession(String(user._id));
     return authJsonResponse({ success: true });
   } catch (error) {

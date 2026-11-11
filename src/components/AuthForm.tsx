@@ -18,6 +18,9 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verificationPending, setVerificationPending] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState('');
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -25,6 +28,7 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
 
     setIsSubmitting(true);
     setErrorMessage('');
+    setVerificationMessage('');
 
     try {
       const response = await fetch(
@@ -45,6 +49,17 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
       }
 
       if (!response.ok) {
+        const verificationRequired =
+          result &&
+          typeof result === 'object' &&
+          'code' in result &&
+          result.code === 'EMAIL_NOT_VERIFIED';
+        if (verificationRequired) {
+          setVerificationPending(true);
+          setVerificationMessage(
+            'Enviaremos um novo link para o e-mail informado, se a conta ainda precisar de confirmação.',
+          );
+        }
         const message =
           result &&
           typeof result === 'object' &&
@@ -58,6 +73,20 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
         return;
       }
 
+      const verificationRequired =
+        mode === 'register' &&
+        result &&
+        typeof result === 'object' &&
+        'verificationRequired' in result &&
+        result.verificationRequired === true;
+      if (verificationRequired) {
+        setVerificationPending(true);
+        setVerificationMessage(
+          'Cadastro iniciado. Confira sua caixa de entrada e clique no link para confirmar o e-mail antes de entrar.',
+        );
+        return;
+      }
+
       router.replace(redirectTo);
       router.refresh();
     } catch {
@@ -66,6 +95,48 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const resendVerification = async () => {
+    if (isResendingVerification) return;
+
+    setIsResendingVerification(true);
+    setErrorMessage('');
+    setVerificationMessage('');
+    try {
+      const response = await fetch('/api/auth/verify-email/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+        cache: 'no-store',
+      });
+      let result: unknown = null;
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
+      if (!response.ok) {
+        const message =
+          result &&
+          typeof result === 'object' &&
+          'error' in result &&
+          typeof result.error === 'string'
+            ? result.error
+            : 'Não foi possível solicitar outro link.';
+        setErrorMessage(message);
+        return;
+      }
+      setVerificationMessage(
+        'Se os dados corresponderem a uma conta ainda não confirmada, enviaremos um novo link. Verifique também a pasta de spam.',
+      );
+    } catch {
+      setErrorMessage(
+        'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.',
+      );
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -164,12 +235,31 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
               current === 'login' ? 'register' : 'login',
             );
             setErrorMessage('');
+            setVerificationPending(false);
+            setVerificationMessage('');
           }}
           className="font-medium text-indigo-300 transition hover:text-indigo-200"
         >
           {mode === 'login' ? 'Criar conta' : 'Entrar'}
         </button>
       </p>
+      {verificationPending && (
+        <div className="mt-4 space-y-3">
+          {verificationMessage && (
+            <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-3 text-xs leading-5 text-emerald-100">
+              {verificationMessage}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={resendVerification}
+            disabled={isResendingVerification}
+            className="w-full text-center text-xs font-medium text-indigo-300 transition hover:text-indigo-200 disabled:opacity-50"
+          >
+            {isResendingVerification ? 'Enviando...' : 'Reenviar e-mail de confirmação'}
+          </button>
+        </div>
+      )}
       {mode === 'login' && (
         <Link
           href="/forgot-password"

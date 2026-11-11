@@ -1,10 +1,10 @@
 import 'server-only';
 
-import { createTransport } from 'nodemailer';
 import {
   getPasswordResetUrl,
   getSmtpConfiguration,
 } from '@/src/libs/passwordResetConfig';
+import { createSmtpTransport } from '@/src/libs/smtpTransport';
 
 function escapeHtml(value: string) {
   return value
@@ -21,29 +21,18 @@ export function isPasswordResetEmailConfigured() {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const smtp = getSmtpConfiguration();
   const resetUrl = getPasswordResetUrl(token);
-  if (!smtp || !resetUrl) {
+  if (!getSmtpConfiguration() || !resetUrl) {
     throw new Error(
       'Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM e PUBLIC_APP_URL.',
     );
   }
 
-  const transporter = createTransport({
-    host: smtp.host,
-    port: smtp.port,
-    secure: smtp.port === 465,
-    requireTLS: smtp.port !== 465,
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 30_000,
-    auth: { user: smtp.user, pass: smtp.password },
-    tls: { minVersion: 'TLSv1.2' },
-  });
+  const { from, transporter } = createSmtpTransport();
   const safeUrl = escapeHtml(resetUrl);
 
   await transporter.sendMail({
-    from: smtp.from,
+    from,
     to: email,
     subject: 'Redefina sua senha do Arcsync',
     text: [

@@ -11,6 +11,7 @@ const UserSchema = new Schema(
       unique: true,
     },
     passwordHash: { type: String, required: true, select: false },
+    emailVerified: { type: Boolean, required: true, default: true },
     activeWorkspaceId: { type: String, default: null, index: true },
   },
   { timestamps: true },

@@ -62,7 +62,7 @@ Escolha o agendador do perfil `operations` do Compose (seção 10) ou um cron ex
 
 Use o mecanismo de segredo do agendador. Registre status e duração sem registrar o cabeçalho. Um GET no navegador não testa esse endpoint. Sem o cron, o calendário pode salvar agendamentos, mas a fila não será executada automaticamente.
 
-Valide `npm run check:env -- --production` no ambiente configurado. Esse comando não comprova conectividade das APIs nem publicação. SMTP serve à recuperação de senha; não é usado para publicar nas redes.
+Valide `npm run check:env -- --production` no ambiente configurado. Esse comando não comprova conectividade das APIs nem publicação. SMTP é usado para verificação do cadastro e recuperação de senha; não é usado para publicar nas redes.
 
 ## 3. YouTube — configuração
 
@@ -233,7 +233,7 @@ O validador está na imagem `env-check` (estágio builder); a imagem enxuta do a
 
 A porta web é publicada somente em `127.0.0.1` do host. Configurar proxy reverso e certificado HTTPS, preservando Host e protocolo encaminhado. Ajustar limite de corpo/tempo de upload para suportar os 95 MB aceitos pelo app e a sobrecarga do formulário. Validar também entrega e expiração de mídias assinadas.
 
-SMTP: preencher as cinco variáveis da seção 2 com dados reais do provedor. O código usa TLS direto na porta 465; para 587, usa o transporte SMTP com negociação de TLS conforme o servidor. Confirmar remetente autorizado e autenticação do domínio com o provedor. Testar recuperação de senha e recebimento na etapa final.
+SMTP: preencher as cinco variáveis da seção 2 com dados reais do provedor. O código usa TLS direto na porta 465; para 587, usa o transporte SMTP com negociação de TLS conforme o servidor. Confirmar remetente autorizado e autenticação do domínio com o provedor. Testar confirmação de cadastro e recuperação de senha na etapa final. Cadastros novos só podem entrar após confirmar o endereço; contas existentes permanecem válidas.
 
 Depois de validar contas, revisar a fila e liberar os testes reais, definir `PUBLISHING_ENABLED=true` no arquivo da aplicação e executar:
 
