@@ -37,6 +37,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Gerar tipos de rotas Next.js
+        run: npx next typegen
+
       - name: Type-check
         run: npx tsc --noEmit
 
