@@ -75,7 +75,7 @@ Confirmar no painel os papéis, contas de teste, acesso avançado e eventual ver
 
 ## Facebook / Meta
 
-Recorte: Páginas, texto ou uma foto JPG/PNG no feed. Sem publicação em perfil pessoal ou grupo; sem Stories/Reels/carrossel nesta versão.
+Recorte: Páginas, texto ou uma foto JPG/PNG no feed e vídeos MP4. Sem publicação em perfil pessoal ou grupo; sem Stories/Reels/carrossel nesta versão.
 
 | Permissão | Justificativa |
 |---|---|
@@ -83,7 +83,7 @@ Recorte: Páginas, texto ou uma foto JPG/PNG no feed. Sem publicação em perfil
 | `pages_read_engagement` | Acesso de leitura da Página exigido no fluxo de gerenciamento/publicação; demonstrar o uso efetivo e confirmar exigência no painel antes de submeter. |
 | `pages_manage_posts` | Criar o post autorizado na Página selecionada. |
 
-Roteiro: autorizar Páginas no login Meta; mostrar as Páginas conectadas; selecionar uma no editor; publicar texto e depois foto; mostrar conteúdo na Página e histórico do app; explicar a desconexão local e a revogação nas integrações comerciais do Facebook.
+Roteiro: autorizar Páginas no login Meta; mostrar as Páginas conectadas; selecionar uma no editor; publicar texto, foto e vídeo MP4 de teste; mostrar conteúdo na Página e histórico do app; explicar a desconexão local e a revogação nas integrações comerciais do Facebook.
 
 [Referência oficial de publicação](https://developers.facebook.com/docs/pages-api/posts/) e [App Review](https://developers.facebook.com/docs/app-review/). A consulta automatizada à documentação Meta não esteve disponível. A lista reflete o código; requisitos atuais, endpoints e evidências devem ser conferidos no painel na etapa final.
 

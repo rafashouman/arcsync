@@ -4,6 +4,7 @@ import { validatePostInput } from '../src/libs/postValidation.ts';
 import { formatIssue } from '../src/libs/postFormats.ts';
 const owner = 'a'.repeat(64);
 const image = `/api/media/${owner}/00000000-0000-0000-0000-000000000000.jpg`;
+const facebookVideo = `/api/media/${owner}/00000000-0000-0000-0000-000000000000.mp4`;
 const destination = {platform:'instagram',accountId:'b'.repeat(24),format:'feed'};
 const input = {caption:'Teste',platforms:['instagram'],timeZone:'UTC',scheduledFor:'2030-01-01T12:00:00.000Z',mediaUrls:[image],destinations:[destination]};
 test('preserves explicit account, format and platform text', () => {
@@ -27,6 +28,15 @@ test('enforces Instagram format media cardinality and file types', () => {
  assert.equal(formatIssue('instagram','carousel',[image,image]),null);
  assert.ok(formatIssue('instagram','reel',[image]));
  assert.ok(formatIssue('tiktok','story',[image]));
+});
+
+test('Facebook Page video format accepts a single MP4 only', () => {
+ assert.equal(formatIssue('facebook','feed',[]),null);
+ assert.equal(formatIssue('facebook','feed',[image]),null);
+ assert.equal(formatIssue('facebook','video',[facebookVideo]),null);
+ assert.ok(formatIssue('facebook','feed',[facebookVideo]));
+ assert.ok(formatIssue('facebook','video',[facebookVideo.replace('.mp4','.mov')]));
+ assert.ok(formatIssue('facebook','video',[facebookVideo,facebookVideo]));
 });
 
 test('independent media and time preserve common fallback for other networks', () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
@@ -132,6 +132,12 @@ type PendingAction =
 
 function isVideoMediaUrl(url: string): boolean {
   return /\.(mp4|mov|webm)(?:[?#]|$)/i.test(url);
+}
+
+function getDefaultFacebookFormat(mediaUrls: string[]) {
+  return mediaUrls.length === 1 && /\.mp4(?:[?#]|$)/i.test(mediaUrls[0])
+    ? 'video'
+    : 'feed';
 }
 
 function getDeviceTimeZone() {
@@ -312,7 +318,11 @@ function PostModalContent({
         accounts.find((a) => a.platform === platform)?.id ||
         '';
       const defaultFormat =
-        platform === 'instagram' || platform === 'facebook' ? 'feed' : 'video';
+        platform === 'facebook'
+          ? getDefaultFacebookFormat(mediaUrls)
+          : platform === 'instagram'
+            ? 'feed'
+            : 'video';
       return [
         ...current.filter((d) => d.platform !== platform),
         {
@@ -489,21 +499,17 @@ function PostModalContent({
     selectedPost?.publishMayHaveSucceeded === true;
 
   // Detect if user has unsaved work to protect against accidental close
-  const hasUnsavedChanges = useMemo(() => {
-    if (lockedPost) return false;
-    if (!selectedPost) {
-      return (
+  const hasUnsavedChanges = !lockedPost && (
+    selectedPost
+      ? caption !== (selectedPost.caption ?? '') ||
+        mediaUrls.length !== (selectedPost.mediaUrls?.length ?? 0) ||
+        selectedPlatforms.join(',') !== (selectedPost.platforms ?? []).join(',')
+      : (
         caption.trim().length > 0 ||
         mediaUrls.length > 0 ||
         selectedPlatforms.length > 0
-      );
-    }
-    return (
-      caption !== (selectedPost.caption ?? '') ||
-      mediaUrls.length !== (selectedPost.mediaUrls?.length ?? 0) ||
-      selectedPlatforms.join(',') !== (selectedPost.platforms ?? []).join(',')
-    );
-  }, [lockedPost, selectedPost, caption, mediaUrls, selectedPlatforms]);
+      )
+  );
 
   const handleRequestClose = () => {
     if (isBusy || isUploading) return;
@@ -576,7 +582,7 @@ function PostModalContent({
                 ? 'reel'
                 : 'feed'
             : platform === 'facebook'
-              ? 'feed'
+              ? getDefaultFacebookFormat(mediaUrls)
               : 'video';
         setDestinations((dests) => {
           const existing = dests.find((d) => d.platform === platform);
@@ -639,6 +645,15 @@ function PostModalContent({
           // Smart format adjustment for Instagram based on uploaded media
           setDestinations((dests) =>
             dests.map((d) => {
+              if (
+                d.platform === 'facebook' &&
+                !d.mediaUrls?.length &&
+                d.format === 'feed' &&
+                nextUrls.length === 1 &&
+                /\.mp4$/i.test(nextUrls[0])
+              ) {
+                return { ...d, format: 'video' };
+              }
               if (d.platform !== 'instagram' || d.mediaUrls?.length) return d;
               if (nextUrls.length > 1 && d.format !== 'carousel') {
                 return { ...d, format: 'carousel' };
@@ -669,7 +684,11 @@ function PostModalContent({
     }
   };
 
-  const validateBeforeSchedule = (asDraft: boolean, publishNow = false) => {
+  const validateBeforeSchedule = (
+    asDraft: boolean,
+    publishNow: boolean,
+    now: number,
+  ) => {
     if (!asDraft && selectedPlatforms.length === 0) {
       setErrorMessage('Selecione ao menos um canal (rede social) para agendar.');
       return false;
@@ -728,7 +747,7 @@ function PostModalContent({
         );
         return false;
       }
-      if (new Date(unifiedIso).getTime() <= Date.now()) {
+      if (new Date(unifiedIso).getTime() <= now) {
         setErrorMessage('Escolha uma data e horário no futuro.');
         return false;
       }
@@ -737,14 +756,18 @@ function PostModalContent({
     return true;
   };
 
-  const executeSave = async (asDraft: boolean, publishNow = false) => {
+  const executeSave = async (
+    asDraft: boolean,
+    publishNow: boolean,
+    now: number,
+  ) => {
     setConfirmScheduleModal(null);
-    if (!validateBeforeSchedule(asDraft, publishNow)) return;
+    if (!validateBeforeSchedule(asDraft, publishNow, now)) return;
 
     const scheduledFor = asDraft
       ? null
       : publishNow
-        ? new Date(Date.now() + 5_000).toISOString()
+        ? new Date(now + 5_000).toISOString()
         : zonedDateTimeToIso(scheduledDate, time, timeZone);
 
     setPendingAction(asDraft ? 'draft' : 'schedule');
@@ -757,9 +780,11 @@ function PostModalContent({
           accounts.find((a) => a.platform === platform)?.id ||
           '';
         const defaultFormat =
-          platform === 'instagram' || platform === 'facebook'
-            ? 'feed'
-            : 'video';
+          platform === 'facebook'
+            ? getDefaultFacebookFormat(mediaUrls)
+            : platform === 'instagram'
+              ? 'feed'
+              : 'video';
         return {
           platform,
           accountId: fallbackAccountId,
@@ -1088,9 +1113,11 @@ function PostModalContent({
                       );
                       const currentFormat =
                         dest?.format ??
-                        (platform === 'instagram' || platform === 'facebook'
-                          ? 'feed'
-                          : 'video');
+                        (platform === 'facebook'
+                          ? getDefaultFacebookFormat(mediaUrls)
+                          : platform === 'instagram'
+                            ? 'feed'
+                            : 'video');
                       const formats = POST_FORMATS[platform];
                       return (
                         <div
@@ -2303,7 +2330,7 @@ function PostModalContent({
               <>
                 <button
                   type="button"
-                  onClick={() => void executeSave(true)}
+                  onClick={() => void executeSave(true, false, Date.now())}
                   disabled={isBusy || isUploading}
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.03] px-4 text-xs font-medium text-slate-200 transition hover:bg-white/[0.07] disabled:opacity-50"
                 >
@@ -2320,7 +2347,7 @@ function PostModalContent({
                   disabled={isBusy || isUploading || tiktokDisclosureMissing}
                   onClick={() => {
                     setErrorMessage('');
-                    if (validateBeforeSchedule(false, true)) {
+                    if (validateBeforeSchedule(false, true, Date.now())) {
                       setConfirmScheduleModal({ publishNow: true });
                     }
                   }}
@@ -2335,7 +2362,7 @@ function PostModalContent({
                   disabled={isBusy || isUploading || tiktokDisclosureMissing}
                   onClick={() => {
                     setErrorMessage('');
-                    if (validateBeforeSchedule(false, false)) {
+                    if (validateBeforeSchedule(false, false, Date.now())) {
                       setConfirmScheduleModal({ publishNow: false });
                     }
                   }}
@@ -2393,7 +2420,11 @@ function PostModalContent({
                 <button
                   type="button"
                   onClick={() =>
-                    void executeSave(false, confirmScheduleModal.publishNow)
+                    void executeSave(
+                      false,
+                      confirmScheduleModal.publishNow,
+                      Date.now(),
+                    )
                   }
                   className="min-w-[90px] rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white transition hover:bg-blue-500"
                 >
@@ -2430,7 +2461,7 @@ function PostModalContent({
                   type="button"
                   onClick={() => {
                     setConfirmDiscardModal(false);
-                    void executeSave(true);
+                    void executeSave(true, false, Date.now());
                   }}
                   className="rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.08]"
                 >

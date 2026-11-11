@@ -58,7 +58,7 @@ Não envie nem versione credenciais: `.env.local` está ignorado pelo Git.
 ## Produção no VPS
 
 O Arcsync está publicado em
-[https://arcsync.focuspulse.site](https://arcsync.focuspulse.site), em um VPS
+[https://arcsync.nexusync.online](https://arcsync.nexusync.online), em um VPS
 com Ubuntu 26.04 LTS. O domínio principal existente continua no mesmo servidor;
 o Arcsync usa um subdomínio e um virtual host Nginx próprios. O HTTPS é
 gerenciado pelo Certbot, com renovação automática.
@@ -116,7 +116,7 @@ Antes de habilitar o workflow:
    `2770`, e `shared/uploads` como `arcsync-staging:arcsync-staging` com modo
    `0750`. Crie `/opt/arcsync-staging/shared/.env.production` como
    `root:arcsync-staging`, modo `0640`. Configure-o diretamente na VPS com
-   `PUBLIC_APP_URL=https://staging.arcsync.focuspulse.site`, credenciais de um
+   `PUBLIC_APP_URL=https://staging.arcsync.nexusync.online`, credenciais de um
    banco MongoDB de homologação separado da produção e as demais variáveis
    exigidas por `npm run check:env -- --production`. `MONGODB_URI` precisa usar
    um endereço acessível de dentro da rede Docker, por exemplo
@@ -135,7 +135,7 @@ Antes de habilitar o workflow:
 5. Depois de versionar e enviar as alterações à `main`, abra **Actions →
    Deploy Arcsync staging to Hostinger VPS → Run workflow** e digite
    `deploy-staging`. Após o primeiro deploy, valide o proxy localmente; então
-   crie no DNS um registro A para `staging.arcsync.focuspulse.site` apontando
+   crie no DNS um registro A para `staging.arcsync.nexusync.online` apontando
    para o IP da VPS. Quando o DNS resolver, emita o certificado com Certbot e
    habilite o redirecionamento HTTP → HTTPS. A produção permanece no host e
    serviço atuais.
@@ -250,7 +250,8 @@ O editor inclui uma prévia aproximada do conteúdo e valida os requisitos de
 cada rede antes de agendar: Instagram aceita legenda de até 2.200 caracteres e
 de 1 a 10 mídias JPG, MP4 ou MOV; YouTube exige um vídeo MP4, MOV ou WEBM e usa
 a primeira linha da legenda como título; TikTok exige um vídeo MP4, MOV ou
-WEBM e consulta as opções disponíveis da conta antes do agendamento.
+WEBM e consulta as opções disponíveis da conta antes do agendamento; Facebook
+Pages aceita texto, uma foto JPG/PNG ou um vídeo MP4.
 
 ## Workspaces, equipe e aprovações
 
@@ -294,7 +295,9 @@ periodicamente (por exemplo, a cada minuto). A conta precisa estar conectada e
 definida como padrão, e a mídia precisa estar disponível na URL HTTPS pública do
 app durante o processamento.
 
-O worker publica no Instagram, TikTok e YouTube. No TikTok, os vídeos são
+O worker publica no Instagram, Facebook Pages, TikTok e YouTube. No Facebook,
+vídeos MP4 são enviados à Página pela URL HTTPS assinada; uploads permanecem
+sujeitos ao limite compartilhado de 95 MB do Arcsync. No TikTok, os vídeos são
 enviados em blocos e o estado de processamento é consultado antes de marcar
 uma publicação como concluída. A URL de envio e o identificador da publicação
 são persistidos para retomar o trabalho sem iniciar outro post. Um post

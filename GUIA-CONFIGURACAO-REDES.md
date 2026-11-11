@@ -12,7 +12,7 @@ Revisão: 3 de novembro de 2026. Este guia prepara a configuração; não altera
 - Conta Meta de desenvolvedor, Instagram profissional e Página Facebook de teste com permissão para publicar.
 - Dados empresariais/documentação quando solicitados na revisão.
 
-O app inclui Instagram, TikTok, YouTube e Facebook Pages, sujeitos à homologação real. Facebook começa com texto ou uma foto JPG/PNG no feed; não inclui perfil pessoal, grupos, Stories, Reels ou carrossel.
+O app inclui Instagram, TikTok, YouTube e Facebook Pages, sujeitos à homologação real. Facebook Pages aceita texto ou uma foto JPG/PNG no feed e vídeo MP4; não inclui perfil pessoal, grupos, Stories, Reels ou carrossel. O envio usa a API de vídeos da Página e a URL HTTPS assinada da mídia.
 
 ## 2. Preparar o servidor
 
@@ -159,7 +159,7 @@ FACEBOOK_GRAPH_API_VERSION=v26.0
 
 5. Reinicie e use **Contas sociais → Facebook Páginas → Conectar**. Na autorização Meta, escolha as Páginas que deseja disponibilizar à equipe. O Arcsync armazena as Páginas concedidas com tarefa de criar conteúdo/gerenciar. Em cada post, selecione explicitamente a Página de destino.
 6. Tokens de Página ficam criptografados. A validade da autorização do usuário não é usada como prazo do token da Página; o Facebook valida o token ao publicar. Se a Meta recusar a autorização, reconecte a Página. Não há refresh token de Facebook.
-7. Teste texto e depois uma foto JPG/PNG. O agendamento ocorre na fila do Arcsync: o cron envia ao Facebook no horário escolhido. A primeira versão não fornece campo específico de prévia de link, vídeos ou múltiplas fotos.
+7. Teste texto, uma foto JPG/PNG e um vídeo MP4 pequeno. O Arcsync limita cada envio de mídia a 95 MB por causa do caminho de upload compartilhado; esse valor não é o limite máximo da API do Facebook. O agendamento ocorre na fila do Arcsync: o cron envia ao Facebook no horário escolhido. A prévia de link e múltiplas fotos não estão disponíveis.
 8. Para atender clientes externos, conclua revisão, acessos e verificação empresarial pedidos pelo painel. Remover a Página do Arcsync remove a conexão local; para revogar o app na Meta, remova-o também nas integrações comerciais do Facebook.
 
 [Referência de publicação em Páginas](https://developers.facebook.com/docs/pages-api/posts/). A leitura automatizada dessa referência retornou limite de acesso. Os endpoints e permissões implementados devem ser confirmados no painel e na homologação real; os testes locais usam respostas simuladas, não certificam compatibilidade externa.

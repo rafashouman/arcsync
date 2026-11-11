@@ -85,7 +85,9 @@ export function getPublishingIssue(
   mediaUrls: string[],
 ): string | null {
   if (platform === 'facebook') {
-    if (mediaUrls.length > 1 || mediaUrls.some(url => !/\.(jpg|png)$/i.test(url))) return 'Facebook aceita texto ou uma foto JPG/PNG neste MVP.';
+    if (mediaUrls.length > 1 || mediaUrls.some(url => !/\.(jpg|png|mp4)$/i.test(url))) {
+      return 'Facebook aceita texto, uma foto JPG/PNG ou um vídeo MP4.';
+    }
     if (!caption.trim() && !mediaUrls.length) return 'Adicione texto ou uma foto para publicar no Facebook.';
     return null;
   }

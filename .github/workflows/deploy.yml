@@ -10,9 +10,43 @@ concurrency:
   group: arcsync-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
+  verify:
+    name: Validar antes do deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.12.0
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build da imagem de produção
+        run: docker build --target runner --tag arcsync:ci .
+
   deploy:
     name: Deploy para a VPS
+    needs: verify
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:

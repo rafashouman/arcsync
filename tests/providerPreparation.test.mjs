@@ -48,16 +48,30 @@ test('TikTok requests PULL_FROM_URL without requiring upload_url', async () => {
   await assert.rejects(initializeTikTokVideoFromUrl('fake',{},'http://localhost/video.mp4',async () => {assert.fail('must not fetch');}));
   await assert.rejects(initializeTikTokVideoFromUrl('fake',{},'https://media.example/video.mp4',async () => Response.json({data:{},error:{code:'ok'}})));
 });
-test('Facebook text/photo routing and returned post identity', async () => {
-  for (const photo of [undefined,'https://media.example/photo.jpg']) {
-    assert.equal(await publishFacebookPagePost('123','fake','v26.0','Texto',photo,async (url,init) => {
-      assert.ok(url.endsWith(photo ? '/photos' : '/feed'));
+test('Facebook text, photo and video routing return the published identity', async () => {
+  for (const media of [undefined,{type:'photo',url:'https://media.example/photo.jpg'}]) {
+    assert.equal(await publishFacebookPagePost('123','fake','v26.0','Texto',media,async (url,init) => {
+      assert.ok(url.endsWith(media ? '/photos' : '/feed'));
       assert.equal(init.headers.Authorization,'Bearer fake');
       const body = JSON.parse(init.body);
-      assert.equal(body[photo ? 'caption' : 'message'],'Texto');
+      assert.equal(body[media ? 'caption' : 'message'],'Texto');
       return Response.json({id:'99',post_id:'123_99'});
     }),'123_99');
   }
+  assert.equal(await publishFacebookPagePost('123','fake','v26.0','Legenda',{
+    type:'video',
+    url:'https://media.example/video.mp4?signature=test',
+  },async (url,init) => {
+    assert.ok(url.endsWith('/videos'));
+    assert.equal(init.headers.Authorization,'Bearer fake');
+    assert.equal(init.headers['Content-Type'],'application/x-www-form-urlencoded');
+    const body = new URLSearchParams(init.body);
+    assert.equal(body.get('file_url'),'https://media.example/video.mp4?signature=test');
+    assert.equal(body.get('description'),'Legenda');
+    assert.equal(body.get('published'),'true');
+    assert.equal(body.has('upload_phase'),false);
+    return Response.json({id:'456'});
+  }),'456');
 });
 test('Facebook distinguishes confirmed rejection from ambiguous network/server outcomes', async () => {
   for (const [fetcher,uncertain] of [
@@ -99,6 +113,21 @@ test('Facebook rejects unavailable formats and supports text without media', () 
   const input = {caption:'Texto',platforms:['facebook'],scheduledFor:'2030-01-01T00:00:00Z',timeZone:'UTC',mediaUrls:[],destinations:[{platform:'facebook',accountId:'b'.repeat(24),format:'feed'}]};
   assert.equal(typeof validatePostInput(input,'a'.repeat(64),false,0),'object');
   assert.equal(typeof validatePostInput({...input,destinations:[{...input.destinations[0],format:'story'}]},'a'.repeat(64),false,0),'string');
+});
+test('Facebook schedules a single MP4 video and rejects other video formats', () => {
+  const owner = 'a'.repeat(64);
+  const video = `/api/media/${owner}/00000000-0000-0000-0000-000000000000.mp4`;
+  const input = {
+    caption:'Legenda',
+    platforms:['facebook'],
+    scheduledFor:'2030-01-01T00:00:00Z',
+    timeZone:'UTC',
+    mediaUrls:[video],
+    destinations:[{platform:'facebook',accountId:'b'.repeat(24),format:'video'}],
+  };
+  assert.equal(typeof validatePostInput(input,owner,false,0),'object');
+  assert.equal(typeof validatePostInput({...input,destinations:[{...input.destinations[0],format:'feed'}]},owner,false,0),'string');
+  assert.equal(typeof validatePostInput({...input,mediaUrls:[video.replace('.mp4','.mov')]},owner,false,0),'string');
 });
 test('Instagram supports Meta Unified Login (config_id) and Facebook Login over graph.facebook.com', async () => {
   const baseConfig = {

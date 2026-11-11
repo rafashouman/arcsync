@@ -23,7 +23,7 @@ Atualizado em 03/11/2026. Este documento distingue preparação local de ativaç
 
 Documentos de execução: `OPERACAO-MVP.md`, `POLITICA-RETENCAO-PROPOSTA.md`, `GUIA-CONFIGURACAO-REDES.md`, `APROVACAO-REDES.md` e `TESTES-MVP.md`.
 
-Facebook Reels/Stories/carrossel e TikTok fotos continuam fora do escopo atual. Sua inclusão deve ser uma etapa de produto própria, com validação das APIs e requisitos correspondentes.
+Facebook Pages suporta texto, foto e vídeo MP4. Facebook Reels/Stories/carrossel e TikTok fotos continuam fora do escopo atual. Sua inclusão deve ser uma etapa de produto própria, com validação das APIs e requisitos correspondentes.
 
 
 ## Ordem prática para concluir
