@@ -23,9 +23,19 @@ export function hashSessionToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export async function createUser(email: string, passwordHash: string) {
+export async function createUser(
+  email: string,
+  passwordHash: string,
+  analyticsConsent = false,
+) {
   await requireDatabase();
-  return User.create({ email, passwordHash, emailVerified: false });
+  return User.create({
+    email,
+    passwordHash,
+    emailVerified: false,
+    analyticsConsent,
+    analyticsConsentUpdatedAt: new Date(),
+  });
 }
 
 export async function findUserForLogin(email: string) {
@@ -190,7 +200,7 @@ export async function findUserForSession(token: string) {
   if (!session) return null;
 
   const user = await User.findById(session.userId)
-    .select('email emailVerified')
+    .select('email emailVerified analyticsConsent')
     .lean();
   if (!user) {
     await UserSession.deleteOne({ _id: session._id });
@@ -201,7 +211,54 @@ export async function findUserForSession(token: string) {
     return null;
   }
 
-  return { uid: String(user._id), email: user.email };
+  return {
+    uid: String(user._id),
+    email: user.email,
+    analyticsConsent: Boolean(user.analyticsConsent),
+  };
+}
+
+export async function getUserAnalyticsConsent(userId: string) {
+  await requireDatabase();
+  const user = await User.findById(userId)
+    .select('analyticsConsent analyticsConsentUpdatedAt')
+    .lean();
+  if (!user) return null;
+  return {
+    analyticsConsent: Boolean(user.analyticsConsent),
+    analyticsConsentUpdatedAt: user.analyticsConsentUpdatedAt
+      ? new Date(user.analyticsConsentUpdatedAt)
+      : null,
+  };
+}
+
+export async function updateUserAnalyticsConsent(
+  userId: string,
+  analyticsConsent: boolean,
+) {
+  await requireDatabase();
+  const updatedAt = new Date();
+  const updated = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        analyticsConsent,
+        analyticsConsentUpdatedAt: updatedAt,
+      },
+    },
+    { new: true },
+  )
+    .select('analyticsConsent analyticsConsentUpdatedAt')
+    .lean();
+  if (!updated) {
+    throw new Error('Usuário não encontrado.');
+  }
+  return {
+    analyticsConsent: Boolean(updated.analyticsConsent),
+    analyticsConsentUpdatedAt: updated.analyticsConsentUpdatedAt
+      ? new Date(updated.analyticsConsentUpdatedAt)
+      : updatedAt,
+  };
 }
 
 export async function revokeUserSession(token: string) {

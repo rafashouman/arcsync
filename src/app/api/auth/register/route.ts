@@ -60,6 +60,8 @@ export async function POST(request: Request) {
 
   const email = normalizeEmail(parsed.body.email);
   const password = parsed.body.password;
+  const analyticsConsent =
+    'analyticsConsent' in parsed.body && parsed.body.analyticsConsent === true;
   if (!isEmailVerificationEmailConfigured()) {
     console.error(
       'Cadastro indisponível: SMTP e PUBLIC_APP_URL precisam estar configurados para verificar e-mails.',
@@ -102,7 +104,7 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await hashPassword(password);
-    const user = await createUser(email, passwordHash);
+    const user = await createUser(email, passwordHash, analyticsConsent);
     userId = String(user._id);
     const token = randomBytes(32).toString('base64url');
     tokenHash = hashSessionToken(token);

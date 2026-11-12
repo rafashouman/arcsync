@@ -13,6 +13,8 @@ const UserSchema = new Schema(
     passwordHash: { type: String, required: true, select: false },
     emailVerified: { type: Boolean, required: true, default: true },
     activeWorkspaceId: { type: String, default: null, index: true },
+    analyticsConsent: { type: Boolean, required: true, default: false },
+    analyticsConsentUpdatedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

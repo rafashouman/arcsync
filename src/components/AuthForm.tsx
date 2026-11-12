@@ -10,6 +10,7 @@ import {
   LockKeyhole,
   Mail,
 } from 'lucide-react';
+import { applyAnalyticsConsent } from '@/src/libs/analyticsConsent';
 
 export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
   const [verificationPending, setVerificationPending] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState('');
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [analyticsConsent, setAnalyticsConsent] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -36,7 +38,11 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), password }),
+          body: JSON.stringify(
+            mode === 'register'
+              ? { email: email.trim(), password, analyticsConsent }
+              : { email: email.trim(), password },
+          ),
           cache: 'no-store',
         },
       );
@@ -79,6 +85,9 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
         typeof result === 'object' &&
         'verificationRequired' in result &&
         result.verificationRequired === true;
+      if (mode === 'register') {
+        applyAnalyticsConsent(analyticsConsent);
+      }
       if (verificationRequired) {
         setVerificationPending(true);
         setVerificationMessage(
@@ -200,6 +209,25 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
           </span>
         </label>
 
+        {mode === 'register' && (
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/[0.07] bg-[#0c1018]/70 p-3 text-xs leading-5 text-slate-300">
+            <input
+              type="checkbox"
+              name="analyticsConsent"
+              checked={analyticsConsent}
+              onChange={(event) => setAnalyticsConsent(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-[#0c1018] text-indigo-500 focus:ring-2 focus:ring-indigo-400/30"
+            />
+            <span>
+              Concordo com o uso de cookies e analytics (Google Analytics) para medir o uso e melhorar o Arcsync, conforme a{' '}
+              <Link href="/privacy" className="text-indigo-300 underline hover:text-indigo-200">
+                Política de Privacidade
+              </Link>
+              . (Opcional)
+            </span>
+          </label>
+        )}
+
         {errorMessage && (
           <div
             role="alert"
@@ -237,6 +265,7 @@ export default function AuthForm({ redirectTo = '/' }: { redirectTo?: string }) 
             setErrorMessage('');
             setVerificationPending(false);
             setVerificationMessage('');
+            setAnalyticsConsent(false);
           }}
           className="font-medium text-indigo-300 transition hover:text-indigo-200"
         >

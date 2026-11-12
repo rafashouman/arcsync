@@ -4,8 +4,10 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { ArrowLeft, Settings2 } from 'lucide-react';
 import SignOutButton from '@/src/components/SignOutButton';
+import AnalyticsConsentCard from '@/src/components/AnalyticsConsentCard';
 import InstagramAccounts from '@/src/components/InstagramAccounts';
 import OAuthSocialAccounts from '@/src/components/OAuthSocialAccounts';
+import { getUserAnalyticsConsent } from '@/src/data/auth';
 import { listInstagramAccountsForWorkspace } from '@/src/data/accounts';
 import {
   listSocialAccountsForWorkspace,
@@ -31,7 +33,7 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
 
   const workspace = await getWorkspaceContext(user.uid, user.email);
   const canManageAccounts = canManageWorkspace(workspace.role);
-  const [{ meta, social }, instagramAccounts, tiktokAccounts, youtubeAccounts, facebookAccounts] = await Promise.all([
+  const [{ meta, social }, instagramAccounts, tiktokAccounts, youtubeAccounts, facebookAccounts, consentData] = await Promise.all([
     searchParams,
     process.env.MONGODB_URI
       ? listInstagramAccountsForWorkspace(workspace.workspaceId)
@@ -43,6 +45,7 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
       ? listSocialAccountsForWorkspace(workspace.workspaceId, 'youtube')
       : Promise.resolve([]),
     process.env.MONGODB_URI ? listSocialAccountsForWorkspace(workspace.workspaceId, 'facebook') : Promise.resolve([]),
+    process.env.MONGODB_URI ? getUserAnalyticsConsent(user.uid) : Promise.resolve(null),
   ]);
   const isOAuthConfigured = Boolean(
     (process.env.INSTAGRAM_APP_ID || process.env.FACEBOOK_APP_ID) &&
@@ -109,6 +112,17 @@ async function AccountsContent({ searchParams }: AccountsPageProps) {
           configured={socialOAuthConfigured}
           canManageAccounts={canManageAccounts}
         />
+        <div className="mt-8">
+          <AnalyticsConsentCard
+            initialConsent={consentData?.analyticsConsent ?? Boolean(user.analyticsConsent)}
+            updatedAt={
+              consentData?.analyticsConsentUpdatedAt
+                ? consentData.analyticsConsentUpdatedAt.toISOString()
+                : null
+            }
+            userEmail={user.email}
+          />
+        </div>
       </div>
     </main>
   );

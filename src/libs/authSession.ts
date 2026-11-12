@@ -17,6 +17,7 @@ export { SESSION_DURATION_MS };
 export interface AuthenticatedUser {
   uid: string;
   email: string;
+  analyticsConsent?: boolean;
 }
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
